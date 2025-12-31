@@ -65,7 +65,7 @@ const Index = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="max-w-3xl mx-auto"
+            className="max-w-3xl mx-auto flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -80,6 +80,29 @@ const Index = () => {
                 </p>
               </div>
             </div>
+            
+            {/* Analytical Engine Badge */}
+            <motion.div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <motion.div
+                className="w-2 h-2 rounded-full bg-emerald-500"
+                animate={{
+                  boxShadow: [
+                    "0 0 4px 1px rgba(16, 185, 129, 0.4)",
+                    "0 0 8px 2px rgba(16, 185, 129, 0.6)",
+                    "0 0 4px 1px rgba(16, 185, 129, 0.4)",
+                  ],
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <span className="text-[10px] uppercase tracking-wider text-emerald-500 font-medium">
+                Analytical Engine Active
+              </span>
+            </motion.div>
           </motion.div>
         </header>
 

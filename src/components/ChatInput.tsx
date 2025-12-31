@@ -86,14 +86,23 @@ const ChatInput = ({ onSend, isLoading, disabled }: ChatInputProps) => {
           </AnimatePresence>
 
           <div className="flex items-end gap-3 p-3">
-            {/* AI indicator */}
-            <motion.div 
-              className="flex-shrink-0 mb-2"
-              animate={isLoading ? { scale: [1, 1.1, 1] } : {}}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
-              <Sparkles className="w-5 h-5 text-primary/60" />
-            </motion.div>
+            {/* Expert Mode indicator */}
+            <div className="flex items-center gap-2 flex-shrink-0 mb-2">
+              <motion.div
+                className="w-2 h-2 rounded-full bg-emerald-500"
+                animate={{
+                  boxShadow: [
+                    "0 0 4px 1px rgba(16, 185, 129, 0.4)",
+                    "0 0 8px 2px rgba(16, 185, 129, 0.6)",
+                    "0 0 4px 1px rgba(16, 185, 129, 0.4)",
+                  ],
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <span className="text-[10px] uppercase tracking-wider text-emerald-500/70 font-medium hidden sm:inline">
+                Expert Mode
+              </span>
+            </div>
 
             {/* Textarea */}
             <textarea
