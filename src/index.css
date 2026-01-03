@@ -6,34 +6,34 @@
 
 @layer base {
   :root {
-    /* Futuristic Dark Theme - Deep Slate & Charcoal */
-    --background: 220 20% 6%;
+    /* Cyber-Noir Theme - Black to Deep Purple Mesh */
+    --background: 270 50% 5%;
     --foreground: 210 40% 98%;
 
-    --card: 220 18% 10%;
+    --card: 270 40% 8%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 220 18% 10%;
+    --popover: 270 40% 8%;
     --popover-foreground: 210 40% 98%;
 
     /* Neon Cyan Primary */
     --primary: 185 100% 50%;
-    --primary-foreground: 220 20% 6%;
+    --primary-foreground: 270 50% 5%;
 
-    --secondary: 220 15% 18%;
+    --secondary: 270 30% 15%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 220 15% 15%;
+    --muted: 270 25% 12%;
     --muted-foreground: 215 20% 55%;
 
-    --accent: 185 100% 50%;
-    --accent-foreground: 220 20% 6%;
+    --accent: 280 80% 60%;
+    --accent-foreground: 270 50% 5%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 15% 16%;
-    --input: 220 15% 16%;
+    --border: 270 25% 14%;
+    --input: 270 25% 14%;
     --ring: 185 100% 50%;
 
     --radius: 0.75rem;
@@ -41,26 +41,26 @@
     /* Neon glow colors */
     --neon-cyan: 185 100% 50%;
     --neon-cyan-glow: 185 100% 60%;
-    --neon-purple: 270 80% 60%;
+    --neon-purple: 280 80% 60%;
 
-    /* Glassmorphism */
-    --glass-bg: 220 20% 100% / 0.03;
-    --glass-border: 220 20% 100% / 0.08;
-    --glass-blur: 24px;
+    /* Glassmorphism - Enhanced */
+    --glass-bg: 0 0% 100% / 0.05;
+    --glass-border: 0 0% 100% / 0.12;
+    --glass-blur: 16px;
 
     /* Sidebar */
-    --sidebar-background: 220 18% 8%;
+    --sidebar-background: 270 40% 6%;
     --sidebar-foreground: 210 40% 90%;
     --sidebar-primary: 185 100% 50%;
-    --sidebar-primary-foreground: 220 20% 6%;
-    --sidebar-accent: 220 15% 14%;
+    --sidebar-primary-foreground: 270 50% 5%;
+    --sidebar-accent: 270 30% 12%;
     --sidebar-accent-foreground: 210 40% 90%;
-    --sidebar-border: 220 15% 14%;
+    --sidebar-border: 270 25% 14%;
     --sidebar-ring: 185 100% 50%;
   }
 
   .dark {
-    --background: 220 20% 6%;
+    --background: 270 50% 5%;
     --foreground: 210 40% 98%;
   }
 }
