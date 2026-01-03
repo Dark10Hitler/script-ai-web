@@ -1,203 +1,91 @@
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import AuroraBackground from "@/components/AuroraBackground";
-import ChatMessage from "@/components/ChatMessage";
-import ChatInput from "@/components/ChatInput";
-import Toast from "@/components/Toast";
-import { sendMessage, Message } from "@/lib/openrouter";
+import { ScenarioGenerator } from "@/components/ScenarioGenerator";
+import { BrowserWarning } from "@/components/BrowserWarning";
+import { RecoveryModal } from "@/components/RecoveryModal";
+import { BalanceProvider } from "@/contexts/BalanceContext";
+import { useUserId } from "@/hooks/useUserId";
+import { Toaster } from "@/components/ui/toaster";
 
 const Index = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const { userId, needsRecovery, recoverAccount, showRecovery, hideRecovery } = useUserId();
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
 
-  // Auto-scroll to bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const handleSend = async (content: string) => {
-    const userMessage: Message = { role: "user", content };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await sendMessage(newMessages);
-      const assistantMessage: Message = { role: "assistant", content: response };
-      setMessages([...newMessages, assistantMessage]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleShowRecovery = () => setShowRecoveryModal(true);
+  const handleHideRecovery = () => setShowRecoveryModal(false);
+  const handleRecover = (id: string) => {
+    recoverAccount(id);
+    handleHideRecovery();
   };
 
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* SEO */}
-      <title>AuraChat - AI Interface</title>
-      <meta name="description" content="AuraChat - A cyber-organic minimalist AI chat interface powered by GPT-4o" />
+      <title>AI Script Generator - Create Viral Content</title>
+      <meta name="description" content="Generate professional scripts for TikTok, YouTube Shorts, and Instagram Reels with AI powered by Claude 3.5 Sonnet" />
       
       {/* Aurora Background */}
       <AuroraBackground />
 
-      {/* Error Toast */}
-      <Toast 
-        message={error || ""} 
-        isVisible={!!error} 
-        onClose={() => setError(null)} 
-      />
+      {/* Browser Warning */}
+      <BrowserWarning />
+
+      {/* Toaster */}
+      <Toaster />
 
       {/* Main Content */}
-      <main className="relative z-10 flex flex-col h-screen">
-        {/* Header */}
-        <header className="flex-shrink-0 pt-8 pb-4 px-6">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="max-w-3xl mx-auto flex items-center justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-[0_0_20px_hsl(185_100%_50%/0.15)]">
-                <Sparkles className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">
-                  AuraChat
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  Powered by GPT-4o
-                </p>
-              </div>
-            </div>
-            
-            {/* Status Badge - Neon Cyan */}
+      <main className="relative z-10">
+        {/* Header Logo */}
+        <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed top-4 left-4 z-20 flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-[0_0_20px_hsl(185_100%_50%/0.15)]">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div className="hidden sm:block">
+            <h2 className="text-lg font-semibold text-foreground tracking-tight">
+              ScriptAI
+            </h2>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Powered by Claude
+            </p>
+          </div>
+        </motion.header>
+
+        {/* Scenario Generator */}
+        {userId ? (
+          <BalanceProvider userId={userId}>
+            <ScenarioGenerator 
+              userId={userId} 
+              onShowRecovery={handleShowRecovery}
+            />
+          </BalanceProvider>
+        ) : (
+          <div className="flex items-center justify-center min-h-screen">
             <motion.div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3 }}
+              className="text-center"
             >
-              <motion.div
-                className="w-2 h-2 rounded-full bg-primary"
-                animate={{
-                  boxShadow: [
-                    "0 0 4px 1px hsl(185 100% 50% / 0.4)",
-                    "0 0 12px 3px hsl(185 100% 50% / 0.6)",
-                    "0 0 4px 1px hsl(185 100% 50% / 0.4)",
-                  ],
-                }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <span className="text-[10px] uppercase tracking-wider text-primary font-medium">
-                Online
-              </span>
+              <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-8 h-8 text-primary animate-pulse" />
+              </div>
+              <p className="text-muted-foreground">Initializing...</p>
             </motion.div>
-          </motion.div>
-        </header>
-
-        {/* Chat Area */}
-        <div 
-          ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-6 pb-40"
-        >
-          <div className="max-w-3xl mx-auto py-8">
-            <AnimatePresence mode="popLayout">
-              {messages.length === 0 ? (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="flex flex-col items-center justify-center min-h-[50vh] text-center"
-                >
-                  <motion.div
-                    className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center mb-6"
-                    animate={{
-                      boxShadow: [
-                        "0 0 30px hsl(185 100% 50% / 0.15)",
-                        "0 0 60px hsl(185 100% 50% / 0.25)",
-                        "0 0 30px hsl(185 100% 50% / 0.15)",
-                      ],
-                    }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                  >
-                    <Sparkles className="w-10 h-10 text-primary" />
-                  </motion.div>
-                  <h2 className="text-2xl font-medium text-foreground mb-3">
-                    Start a conversation
-                  </h2>
-                  <p className="text-muted-foreground max-w-md leading-relaxed">
-                    Ask me anything. I'm here to help with code, ideas, explanations, or just a friendly chat.
-                  </p>
-                </motion.div>
-              ) : (
-                messages.map((message, index) => (
-                  <ChatMessage
-                    key={index}
-                    role={message.role}
-                    content={message.content}
-                    index={index}
-                  />
-                ))
-              )}
-            </AnimatePresence>
-
-            {/* Loading indicator */}
-            <AnimatePresence>
-              {isLoading && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex items-center gap-3 text-muted-foreground mt-6"
-                >
-                  <motion.div
-                    className="flex gap-1"
-                    animate={{ opacity: [0.4, 1, 0.4] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-primary/60" />
-                    <motion.span 
-                      className="w-2 h-2 rounded-full bg-primary/60"
-                      animate={{ opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
-                    />
-                    <motion.span 
-                      className="w-2 h-2 rounded-full bg-primary/60"
-                      animate={{ opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
-                    />
-                  </motion.div>
-                  <span className="text-sm">Thinking...</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div ref={messagesEndRef} />
           </div>
-        </div>
-
-        {/* Input Area */}
-        <ChatInput 
-          onSend={handleSend} 
-          isLoading={isLoading} 
-        />
+        )}
       </main>
+
+      {/* Recovery Modal */}
+      <RecoveryModal
+        isOpen={showRecoveryModal}
+        onClose={handleHideRecovery}
+        onRecover={handleRecover}
+      />
     </div>
   );
 };
