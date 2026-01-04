@@ -1,11 +1,41 @@
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 
 interface GenerationProgressProps {
   isColdStart?: boolean;
 }
 
+const PROGRESS_MESSAGES = [
+  'Connecting to Claude...',
+  'Brainstorming ideas...',
+  'Writing scenes...',
+  'Adding dramatic flair...',
+  'Polishing the script...',
+  'Almost there...',
+];
+
+const COLD_START_MESSAGES = [
+  'Waking up AI server...',
+  'Server is starting...',
+  'Initializing Claude...',
+  'Almost ready...',
+];
+
 export const GenerationProgress = ({ isColdStart }: GenerationProgressProps) => {
+  const [messageIndex, setMessageIndex] = useState(0);
+  const messages = isColdStart ? COLD_START_MESSAGES : PROGRESS_MESSAGES;
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % messages.length);
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [messages.length]);
+  
+  const currentMessage = messages[messageIndex];
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -27,15 +57,22 @@ export const GenerationProgress = ({ isColdStart }: GenerationProgressProps) => 
           <Sparkles className="w-6 h-6 text-primary" />
         </motion.div>
         <div className="flex-1">
-          <p className="text-foreground font-medium">
-            {isColdStart 
-              ? 'Waking up AI server...'
-              : 'Claude 3.5 Sonnet is crafting your masterpiece...'}
-          </p>
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={currentMessage}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+              className="text-foreground font-medium"
+            >
+              {currentMessage}
+            </motion.p>
+          </AnimatePresence>
           <p className="text-sm text-muted-foreground">
             {isColdStart 
               ? 'Cold start detected. This takes ~30 seconds.'
-              : 'This usually takes 10-20 seconds'}
+              : 'This usually takes 10-30 seconds'}
           </p>
         </div>
       </div>
@@ -46,7 +83,7 @@ export const GenerationProgress = ({ isColdStart }: GenerationProgressProps) => 
           className="h-full bg-gradient-to-r from-primary to-accent"
           initial={{ width: '0%' }}
           animate={{ width: '100%' }}
-          transition={{ duration: isColdStart ? 30 : 15, ease: 'linear' }}
+          transition={{ duration: isColdStart ? 30 : 20, ease: 'linear' }}
         />
       </div>
     </motion.div>

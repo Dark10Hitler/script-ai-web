@@ -45,40 +45,61 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
     setResult(null);
     setGenerationColdStart(false);
 
-    const startTime = Date.now();
     const coldStartTimer = setTimeout(() => {
       setGenerationColdStart(true);
     }, 5000);
 
     try {
+      console.log('Starting generation for user:', userId);
       const response = await generateScenario(userId, prompt);
-      clearTimeout(coldStartTimer);
+      console.log('Generation response:', response);
       
       if (response.error === 'Insufficient balance') {
         setShowPricing(true);
         return;
       }
       
-      const content = response.result || response.scenario || response.content || '';
+      // Handle all possible response field names
+      const content = response.script || response.result || response.scenario || response.content || '';
+      console.log('Setting result content:', content.substring(0, 100) + '...');
       setResult(content);
+      
+      // Refresh balance after successful generation
       await fetchBalance();
     } catch (error: any) {
       console.error('Generation error:', error);
+      console.error('Error status:', error.status);
+      console.error('Error message:', error.message);
       
       if (error.status === 403) {
         setShowPricing(true);
+        toast({
+          title: 'Insufficient Credits',
+          description: 'Please top up your balance to continue generating scripts.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      if (error.status === 500) {
+        toast({
+          title: 'Server Error',
+          description: error.serverMessage || error.message || 'Server error occurred. Please try again.',
+          variant: 'destructive',
+        });
         return;
       }
       
       toast({
         title: 'Generation Failed',
-        description: error instanceof Error ? error.message : 'Something went wrong.',
+        description: error.message || 'Something went wrong. Please try again.',
         variant: 'destructive',
       });
     } finally {
       clearTimeout(coldStartTimer);
       setIsGenerating(false);
       setGenerationColdStart(false);
+      console.log('Generation completed, loading state reset');
     }
   };
 
