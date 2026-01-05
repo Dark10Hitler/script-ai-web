@@ -3,12 +3,16 @@ import { motion } from 'framer-motion';
 import { Wand2, Loader2, AlertCircle, Copy, Check } from 'lucide-react';
 import { useBalanceContext } from '@/contexts/BalanceContext';
 import { generateScenario } from '@/lib/scenarioApi';
+import { parseAIResponse } from '@/lib/aiResponseParser';
+import type { ParsedAIResponse } from '@/lib/aiResponseParser';
 import { BalanceHeader } from './BalanceHeader';
 import { ScenarioResult } from './ScenarioResult';
 import { NeuralProgress } from './NeuralProgress';
 import { PricingModal } from './PricingModal';
 import { HookMatrix } from './HookMatrix';
 import { Storyboard } from './Storyboard';
+import { DirectorSummary } from './DirectorSummary';
+import { MasterPromptCenter } from './MasterPromptCenter';
 import { useToast } from '@/hooks/use-toast';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
 
@@ -17,60 +21,11 @@ interface ScenarioGeneratorProps {
   onShowRecovery: () => void;
 }
 
-// Mock data parser - in real scenario, AI would return structured data
-const parseAIResponse = (content: string) => {
-  // This would parse AI response to extract hooks and scenes
-  // For now, returning mock data to demonstrate UI
-  const hooks = [
-    {
-      title: 'The Shock Opener',
-      hook: 'What if I told you everything you know about this is wrong?',
-      retentionScore: 89,
-      badges: ['conversion', 'pattern'] as const,
-    },
-    {
-      title: 'The Question Hook',
-      hook: 'Have you ever wondered why successful people all share this one habit?',
-      retentionScore: 76,
-      badges: ['emotional', 'conversion'] as const,
-    },
-    {
-      title: 'The Story Start',
-      hook: 'Last week, something happened that changed my entire perspective...',
-      retentionScore: 82,
-      badges: ['emotional', 'pattern'] as const,
-    },
-  ];
-
-  const scenes = [
-    {
-      scene: 1,
-      visual: 'Close-up face shot, eyes widen with realization. Natural lighting, slight camera push-in.',
-      audio: '"What if I told you..." (whispered, building tension)',
-      aiPrompt: 'Cinematic close-up of person with shocked expression, natural window lighting, slight lens flare, 4K quality',
-    },
-    {
-      scene: 2,
-      visual: 'B-roll montage: fast cuts of success symbols (laptop, coffee, sunrise). Dynamic camera movements.',
-      audio: 'Upbeat electronic music, subtle bass drop on transition',
-      aiPrompt: 'Fast-paced montage of modern workspace, MacBook, artisan coffee, golden hour light streaming through windows',
-    },
-    {
-      scene: 3,
-      visual: 'Medium shot, direct to camera. Clean background, ring light reflection in eyes.',
-      audio: 'Direct address voiceover, confident tone, slight reverb',
-      aiPrompt: 'Professional content creator speaking to camera, clean minimal background, ring light catchlights, YouTube studio aesthetic',
-    },
-  ];
-
-  return { hooks, scenes, hasStructuredData: content.includes('#') || content.length > 200 };
-};
-
 export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorProps) => {
   const { balance, isLoading: balanceLoading, fetchBalance } = useBalanceContext();
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState<string | null>(null);
-  const [parsedData, setParsedData] = useState<{ hooks: any[]; scenes: any[] } | null>(null);
+  const [parsedData, setParsedData] = useState<ParsedAIResponse | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationColdStart, setGenerationColdStart] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
@@ -116,10 +71,10 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
       console.log('Setting result content:', content.substring(0, 100) + '...');
       setResult(content);
       
-      // Parse for structured data (hooks, scenes)
+      // Parse for structured data using the advanced parser
       const parsed = parseAIResponse(content);
       if (parsed.hasStructuredData) {
-        setParsedData({ hooks: parsed.hooks, scenes: parsed.scenes });
+        setParsedData(parsed);
       }
       
       await fetchBalance();
@@ -269,17 +224,31 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
           <NeuralProgress isColdStart={generationColdStart} />
         )}
 
-        {/* Parsed Structured Data - Hook Matrix */}
+        {/* Director's Summary with PDF Download */}
+        {parsedData && parsedData.hasStructuredData && (
+          <DirectorSummary 
+            hooks={parsedData.hooks} 
+            scenes={parsedData.scenes}
+            userId={userId}
+          />
+        )}
+
+        {/* Viral Hook Matrix */}
         {parsedData && parsedData.hooks.length > 0 && (
           <HookMatrix hooks={parsedData.hooks} />
         )}
 
-        {/* Parsed Structured Data - Storyboard */}
+        {/* Director's Storyboard */}
         {parsedData && parsedData.scenes.length > 0 && (
           <Storyboard scenes={parsedData.scenes} />
         )}
 
-        {/* Result with Copy Button */}
+        {/* Master Prompt Command Center */}
+        {parsedData && parsedData.masterPrompt && (
+          <MasterPromptCenter masterPrompt={parsedData.masterPrompt} />
+        )}
+
+        {/* Raw Result with Copy Button */}
         {result && (
           <div className="relative mt-6">
             <motion.button
