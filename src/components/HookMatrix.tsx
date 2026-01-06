@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Zap, Heart, Sparkles, Brain, Target } from 'lucide-react';
-import type { HookVariant } from '@/lib/aiResponseParser';
+import { Zap, Sparkles, Brain, Target } from 'lucide-react';
+
+// Local interface to avoid circular imports
+export interface HookVariant {
+  type: 'aggressive' | 'intriguing' | 'visual';
+  title: string;
+  hookText: string;
+  retentionForecast: number;
+  mechanism: string;
+}
 
 interface HookMatrixProps {
   hooks: HookVariant[];

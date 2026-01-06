@@ -1,8 +1,20 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Rocket, Copy, Check, Sparkles, Mic2, AudioWaveform } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Rocket, Copy, Check, Sparkles, Mic2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { MasterPrompt } from '@/lib/aiResponseParser';
+
+// Local interface to avoid circular imports
+interface MasterPrompt {
+  fullText: string;
+  role: string;
+  context: string;
+  imagePrompts: string[];
+  voiceSettings: {
+    stability: number;
+    clarity: number;
+    styleExaggeration: number;
+  };
+}
 
 interface MasterPromptCenterProps {
   masterPrompt: MasterPrompt;
