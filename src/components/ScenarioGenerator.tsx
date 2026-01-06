@@ -4,7 +4,6 @@ import { Wand2, Loader2, AlertCircle, Copy, Check } from 'lucide-react';
 import { useBalanceContext } from '@/contexts/BalanceContext';
 import { generateScenario } from '@/lib/scenarioApi';
 import { parseAIResponse } from '@/lib/aiResponseParser';
-import type { ParsedAIResponse } from '@/lib/aiResponseParser';
 import { BalanceHeader } from './BalanceHeader';
 import { ScenarioResult } from './ScenarioResult';
 import { NeuralProgress } from './NeuralProgress';
@@ -15,6 +14,44 @@ import { DirectorSummary } from './DirectorSummary';
 import { MasterPromptCenter } from './MasterPromptCenter';
 import { useToast } from '@/hooks/use-toast';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
+
+// Local interface definitions
+interface HookVariant {
+  type: 'aggressive' | 'intriguing' | 'visual';
+  title: string;
+  hookText: string;
+  retentionForecast: number;
+  mechanism: string;
+}
+
+interface StoryboardScene {
+  scene: number;
+  timing: string;
+  visual: string;
+  audio: string;
+  sfx: string;
+  aiPrompt: string;
+}
+
+interface MasterPrompt {
+  fullText: string;
+  role: string;
+  context: string;
+  imagePrompts: string[];
+  voiceSettings: {
+    stability: number;
+    clarity: number;
+    styleExaggeration: number;
+  };
+}
+
+interface ParsedAIResponse {
+  hooks: HookVariant[];
+  scenes: StoryboardScene[];
+  masterPrompt: MasterPrompt | null;
+  rawContent: string;
+  hasStructuredData: boolean;
+}
 
 interface ScenarioGeneratorProps {
   userId: string;

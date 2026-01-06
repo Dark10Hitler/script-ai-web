@@ -1,10 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Gauge, Download, FileText, Loader2, TrendingUp, Zap } from 'lucide-react';
+import { Gauge, Download, Loader2, TrendingUp, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { HookVariant, StoryboardScene } from '@/lib/aiResponseParser';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+
+// Local interfaces to avoid circular imports
+interface HookVariant {
+  type: 'aggressive' | 'intriguing' | 'visual';
+  title: string;
+  hookText: string;
+  retentionForecast: number;
+  mechanism: string;
+}
+
+interface StoryboardScene {
+  scene: number;
+  timing: string;
+  visual: string;
+  audio: string;
+  sfx: string;
+  aiPrompt: string;
+}
 
 interface DirectorSummaryProps {
   hooks: HookVariant[];

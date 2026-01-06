@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Mic, Volume2, Sparkles, Copy, Check, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { Camera, Mic, Volume2, Sparkles, Copy, Check, ChevronDown, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { StoryboardScene } from '@/lib/aiResponseParser';
+
+// Local interface to avoid circular imports
+export interface StoryboardScene {
+  scene: number;
+  timing: string;
+  visual: string;
+  audio: string;
+  sfx: string;
+  aiPrompt: string;
+}
 
 interface StoryboardProps {
   scenes: StoryboardScene[];
