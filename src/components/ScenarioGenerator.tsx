@@ -97,20 +97,44 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
     try {
       console.log('Starting generation for user:', userId);
       const response = await generateScenario(userId, prompt);
-      console.log('Generation response:', response);
+      console.log('Generation response received:', response);
       
       if (response.error === 'Insufficient balance') {
         setShowPricing(true);
         return;
       }
       
+      // Extract content from various possible response formats
       const content = response.script || response.result || response.scenario || response.content || '';
-      console.log('Setting result content:', content.substring(0, 100) + '...');
+      console.log('Raw content length:', content.length);
+      console.log('Content preview:', content.substring(0, 500));
+      
       setResult(content);
       
       // Parse for structured data using the advanced parser
+      console.log('Parsing AI response...');
       const parsed = parseAIResponse(content);
+      console.log('Parse results:', {
+        hasStructuredData: parsed.hasStructuredData,
+        hooksCount: parsed.hooks.length,
+        scenesCount: parsed.scenes.length,
+        hasMasterPrompt: !!parsed.masterPrompt,
+      });
+      
+      // Log individual items for debugging
+      if (parsed.hooks.length > 0) {
+        console.log('Hooks:', parsed.hooks.map(h => ({ type: h.type, text: h.hookText.substring(0, 50) })));
+      }
+      if (parsed.scenes.length > 0) {
+        console.log('Scenes:', parsed.scenes.map(s => ({ scene: s.scene, visual: s.visual.substring(0, 50) })));
+      }
+      
+      // Always set parsed data if there's any structured content
       if (parsed.hasStructuredData) {
+        setParsedData(parsed);
+      } else if (content.length > 50) {
+        // Even if parsing failed, show demo data for UX
+        console.log('No structured data found, using fallback demo data');
         setParsedData(parsed);
       }
       
