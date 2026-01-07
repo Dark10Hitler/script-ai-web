@@ -5,9 +5,59 @@ import CodeBlock from './CodeBlock';
 
 interface ScenarioResultProps {
   content: string;
+  hideStructuredBlocks?: boolean;
 }
 
-export const ScenarioResult = ({ content }: ScenarioResultProps) => {
+// Filter out structured blocks (БЛОК 1, 2, 3) and raw markdown tables
+const filterContent = (content: string): string => {
+  let filtered = content;
+  
+  // Remove БЛОК 1 section (hooks)
+  filtered = filtered.replace(/БЛОК\s*1[:\s]*.*?(?=БЛОК\s*2|$)/gis, '');
+  
+  // Remove БЛОК 2 section (storyboard table)
+  filtered = filtered.replace(/БЛОК\s*2[:\s]*.*?(?=БЛОК\s*3|Copy-Paste|$)/gis, '');
+  
+  // Remove БЛОК 3 section (master prompt)
+  filtered = filtered.replace(/БЛОК\s*3[:\s]*.*/gis, '');
+  
+  // Remove "Copy-Paste for AI Agent" blocks
+  filtered = filtered.replace(/Copy-Paste\s+(for\s+)?AI\s+Agent[:\s]*.*/gis, '');
+  
+  // Remove standalone markdown tables (lines with |)
+  filtered = filtered.replace(/^\|.*\|$/gm, '');
+  filtered = filtered.replace(/^\|[-:\s|]+\|$/gm, '');
+  
+  // Remove VIRAL HOOK MATRIX header if present
+  filtered = filtered.replace(/#+\s*VIRAL HOOK MATRIX.*/gi, '');
+  filtered = filtered.replace(/VIRAL HOOK MATRIX.*/gi, '');
+  
+  // Remove DIRECTOR'S STORYBOARD header if present
+  filtered = filtered.replace(/#+\s*DIRECTOR['']?S STORYBOARD.*/gi, '');
+  filtered = filtered.replace(/DIRECTOR['']?S STORYBOARD.*/gi, '');
+  
+  // Remove UNIVERSAL AI AGENT BLUEPRINT header if present
+  filtered = filtered.replace(/#+\s*UNIVERSAL AI AGENT BLUEPRINT.*/gi, '');
+  filtered = filtered.replace(/🚀\s*UNIVERSAL AI AGENT BLUEPRINT.*/gi, '');
+  
+  // Remove Variant A/B/C blocks
+  filtered = filtered.replace(/Variant\s+[ABC][:\s]+.+?(?=Variant\s+[ABC]|БЛОК|$)/gis, '');
+  
+  // Clean up excessive whitespace and empty lines
+  filtered = filtered.replace(/\n{3,}/g, '\n\n');
+  filtered = filtered.trim();
+  
+  return filtered;
+};
+
+export const ScenarioResult = ({ content, hideStructuredBlocks = true }: ScenarioResultProps) => {
+  const displayContent = hideStructuredBlocks ? filterContent(content) : content;
+  
+  // Don't render if content is empty after filtering
+  if (!displayContent || displayContent.length < 20) {
+    return null;
+  }
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -72,9 +122,16 @@ export const ScenarioResult = ({ content }: ScenarioResultProps) => {
                 {children}
               </blockquote>
             ),
+            // Hide table elements since we render them as styled components
+            table: () => null,
+            thead: () => null,
+            tbody: () => null,
+            tr: () => null,
+            th: () => null,
+            td: () => null,
           }}
         >
-          {content}
+          {displayContent}
         </ReactMarkdown>
       </div>
     </motion.div>
