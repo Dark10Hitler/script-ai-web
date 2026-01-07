@@ -304,13 +304,13 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
           <Storyboard scenes={parsedData.scenes} />
         )}
 
-        {/* Master Prompt Command Center */}
+        {/* Master Prompt Command Center - Always last */}
         {parsedData && parsedData.masterPrompt && (
           <MasterPromptCenter masterPrompt={parsedData.masterPrompt} />
         )}
 
-        {/* Raw Result with Copy Button */}
-        {result && (
+        {/* Raw Result - Only show if no structured data was parsed, or show filtered content */}
+        {result && (!parsedData?.hasStructuredData) && (
           <div className="relative mt-6">
             <motion.button
               initial={{ opacity: 0, scale: 0.9 }}
@@ -330,7 +330,7 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
                 </>
               )}
             </motion.button>
-            <ScenarioResult content={result} />
+            <ScenarioResult content={result} hideStructuredBlocks={false} />
           </div>
         )}
       </div>
