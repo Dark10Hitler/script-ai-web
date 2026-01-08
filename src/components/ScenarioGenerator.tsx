@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Wand2, Loader2, AlertCircle, Copy, Check } from 'lucide-react';
 import { useBalanceContext } from '@/contexts/BalanceContext';
@@ -12,6 +12,8 @@ import { HookMatrix } from './HookMatrix';
 import { Storyboard } from './Storyboard';
 import { DirectorSummary } from './DirectorSummary';
 import { MasterPromptCenter } from './MasterPromptCenter';
+import { CreatorJourneyBar } from './CreatorJourneyBar';
+import { TrendRadar } from './TrendRadar';
 import { useToast } from '@/hooks/use-toast';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
 
@@ -69,6 +71,17 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   const { placeholder, isVisible } = useRotatingPlaceholder();
+  const generatorRef = useRef<HTMLDivElement>(null);
+
+  // Mock gamification data (ready for backend integration)
+  const [streak] = useState(3);
+  const [currentXP] = useState(350);
+  const [level] = useState(4);
+
+  const handleQuickGenerate = (topicPrompt: string) => {
+    setPrompt(topicPrompt);
+    generatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -202,6 +215,19 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
           </p>
         </motion.div>
 
+        {/* Creator Journey Gamification Bar */}
+        <CreatorJourneyBar
+          streak={streak}
+          currentXP={currentXP}
+          maxXP={500}
+          level={level}
+          rank="Content Padawan"
+          nextRank="Viral Lord"
+        />
+
+        {/* Trend Radar - Daily Inspiration */}
+        <TrendRadar onQuickGenerate={handleQuickGenerate} />
+
         {/* Balance Header */}
         <BalanceHeader
           userId={userId}
@@ -215,6 +241,7 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          ref={generatorRef}
           className="glass-card-elevated rounded-2xl p-6"
         >
           <label className="block text-sm font-medium text-foreground mb-3 tracking-wide">
