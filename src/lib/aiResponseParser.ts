@@ -168,153 +168,111 @@ function getDefaultMechanism(type: 'aggressive' | 'intriguing' | 'visual'): stri
   return mechanisms[type];
 }
 
-// ROBUST Markdown Table Parser for БЛОК 2
+// Block-tag parser for БЛОК 2 - handles [SCENE_START]...[SCENE_END] format
 function parseScenes(content: string): StoryboardScene[] {
   const scenes: StoryboardScene[] = [];
   
+  console.log('[Parser] Parsing scenes with block-tag format...');
+  
   // Find БЛОК 2 section
-  const block2Patterns = [
-    /БЛОК\s*2[:\s]*[^\n]*\n([\s\S]*?)(?=БЛОК\s*3|---|\n```|$)/i,
-    /(?:BLOCK|Block)\s*2[:\s]*[^\n]*\n([\s\S]*?)(?=(?:BLOCK|Block)\s*3|---|\n```|$)/i,
-    /(?:Сториборд|Storyboard|STORYBOARD)[:\s]*\n([\s\S]*?)(?=(?:Master|БЛОК\s*3|Copy-Paste)|$)/i,
-  ];
+  const block2Match = content.match(/БЛОК\s*2[:\s]*(?:DIRECTOR['']?S\s*STORYBOARD)?[:\s]*([\s\S]*?)(?=БЛОК\s*3|Copy-Paste|$)/i);
+  const storyboardContent = block2Match ? block2Match[1] : content;
   
-  let sceneSection = '';
-  for (const pattern of block2Patterns) {
-    const match = content.match(pattern);
-    if (match) {
-      sceneSection = match[1];
-      break;
-    }
-  }
+  // PRIMARY: Split by [SCENE_START] tags
+  const sceneBlocks = storyboardContent.split(/\[SCENE_START\]/i).filter(block => block.trim());
   
-  if (!sceneSection) {
-    sceneSection = content;
-  }
+  console.log(`[Parser] Found ${sceneBlocks.length} scene blocks`);
   
-  console.log('Parsing scene section:', sceneSection.substring(0, 200));
-  
-  // ROBUST TABLE PARSER
-  // Split into lines and find table rows
-  const lines = sceneSection.split('\n');
-  const tableRows: string[] = [];
-  
-  for (const line of lines) {
-    const trimmed = line.trim();
-    // Skip header separator (|---|---|...) and empty lines
-    if (trimmed.startsWith('|') && !trimmed.match(/^\|[\s\-:]+\|$/)) {
-      // Check it's a data row, not just pipes
-      if (trimmed.replace(/\|/g, '').trim().length > 0) {
-        tableRows.push(trimmed);
-      }
-    }
-  }
-  
-  console.log('Found table rows:', tableRows.length);
-  
-  // Detect table structure from header
-  let headerRow = '';
-  let headerIndex = 0;
-  for (let i = 0; i < tableRows.length; i++) {
-    const row = tableRows[i].toLowerCase();
-    if (row.includes('сцена') || row.includes('scene') || row.includes('№') || 
-        row.includes('visual') || row.includes('визуал')) {
-      headerRow = tableRows[i];
-      headerIndex = i;
-      break;
-    }
-  }
-  
-  // Parse data rows (skip header if found)
-  const dataRows = headerIndex > 0 ? tableRows.slice(headerIndex + 1) : tableRows.slice(1);
-  
-  for (const row of dataRows) {
-    // Split by pipe and clean
-    const cells = row.split('|').filter(c => c.trim() !== '');
-    
-    if (cells.length >= 4) {
-      // Try to extract scene number from first cell
-      const firstCell = cleanCell(cells[0]);
-      const sceneNumMatch = firstCell.match(/(\d+)/);
-      const sceneNum = sceneNumMatch ? parseInt(sceneNumMatch[1]) : scenes.length + 1;
+  if (sceneBlocks.length > 0 && storyboardContent.includes('[SCENE_START]')) {
+    for (const block of sceneBlocks) {
+      // Remove [SCENE_END] tag and clean up
+      const cleanBlock = block.replace(/\[SCENE_END\]/gi, '').trim();
       
-      // Map cells based on typical structure
-      // Usually: Scene/Timing | Visual | Audio | AI Prompt
-      // Or: Scene | Timing | Visual | Audio | AI Prompt
-      let timing = '';
-      let visual = '';
-      let audio = '';
-      let aiPrompt = '';
-      let sfx = '';
+      if (!cleanBlock) continue;
       
-      if (cells.length === 4) {
-        // Compact format: Scene+Timing | Visual | Audio | Prompt
-        timing = firstCell.replace(/\d+/g, '').trim() || `Scene ${sceneNum}`;
-        visual = cleanCell(cells[1]);
-        audio = cleanCell(cells[2]);
-        aiPrompt = cleanCell(cells[3]);
-      } else if (cells.length === 5) {
-        // Standard: Scene | Timing | Visual | Audio | Prompt
-        timing = cleanCell(cells[1]);
-        visual = cleanCell(cells[2]);
-        audio = cleanCell(cells[3]);
-        aiPrompt = cleanCell(cells[4]);
-      } else if (cells.length >= 6) {
-        // Extended: Scene | Timing | Visual | Audio | SFX | Prompt
-        timing = cleanCell(cells[1]);
-        visual = cleanCell(cells[2]);
-        audio = cleanCell(cells[3]);
-        sfx = cleanCell(cells[4]);
-        aiPrompt = cleanCell(cells[5]);
-      }
+      // Extract each field using tagged format - flexible matching
+      const extractField = (fieldName: string): string => {
+        // Match FIELD_NAME: content until next field or end
+        const regex = new RegExp(
+          `${fieldName}[:\\s]+([\\s\\S]*?)(?=(?:SCENE_NUMBER|TIMING|VISUAL|TEXT|SFX|AI_VIDEO_PROMPT)[:\\s]|\\[SCENE_END\\]|$)`,
+          'i'
+        );
+        const match = cleanBlock.match(regex);
+        if (match && match[1]) {
+          // Clean the extracted content - remove tags and extra whitespace
+          return match[1].replace(/\[.*?\]/g, '').trim();
+        }
+        return '';
+      };
       
-      // Extract SFX from audio if present
-      const sfxMatch = audio.match(/(?:SFX|Звук|эффекты?)[:\s]*([^.]+)/i);
-      if (sfxMatch) {
-        sfx = sfx || cleanCell(sfxMatch[1]);
-      }
+      const sceneNumber = extractField('SCENE_NUMBER') || `${scenes.length + 1}`;
+      const timing = extractField('TIMING') || 'TBD';
+      const visual = extractField('VISUAL') || 'TBD';
+      const text = extractField('TEXT') || '';
+      const sfx = extractField('SFX') || '';
+      const aiPrompt = extractField('AI_VIDEO_PROMPT') || 'TBD';
       
-      // Only add if we have meaningful content
-      if (visual.length > 3 || audio.length > 3 || aiPrompt.length > 3) {
-        scenes.push({
-          scene: sceneNum,
-          timing: timing || `0:${String((sceneNum - 1) * 5).padStart(2, '0')}-0:${String(sceneNum * 5).padStart(2, '0')}`,
-          visual: visual || 'Scene visual description',
-          audio: audio || 'Audio direction',
-          sfx: sfx,
-          aiPrompt: aiPrompt || 'AI video generation prompt',
-        });
-      }
-    }
-  }
-  
-  console.log('Parsed scenes:', scenes.length);
-  
-  // Alternative: Try scene block format if table parsing yielded nothing
-  if (scenes.length === 0) {
-    const sceneBlockRegex = /(?:Scene|Сцена)\s*(\d+)[:\s\-]*([\s\S]*?)(?=(?:Scene|Сцена)\s*\d+|БЛОК\s*3|$)/gi;
-    let match;
-    
-    while ((match = sceneBlockRegex.exec(sceneSection)) !== null) {
-      const sceneNum = parseInt(match[1]);
-      const sceneContent = match[2];
+      // TEXT goes to audio field
+      const audio = text || 'TBD';
       
-      const visualMatch = sceneContent.match(/(?:Visual|Визуал|Камера|Camera)[:\s]*([^\n]+)/i);
-      const audioMatch = sceneContent.match(/(?:Audio|Аудио|Звук|Voice)[:\s]*([^\n]+)/i);
-      const promptMatch = sceneContent.match(/(?:Prompt|AI\s*Prompt|Промпт)[:\s]*([^\n]+)/i);
-      const timingMatch = sceneContent.match(/(?:Timing|Время|Time)[:\s]*([^\n]+)/i);
+      const scene: StoryboardScene = {
+        scene: parseInt(sceneNumber) || scenes.length + 1,
+        timing: timing,
+        visual: visual,
+        audio: audio,
+        sfx: sfx || '—',
+        aiPrompt: aiPrompt
+      };
       
-      scenes.push({
-        scene: sceneNum,
-        timing: timingMatch ? cleanCell(timingMatch[1]) : `0:${String((sceneNum - 1) * 5).padStart(2, '0')}-0:${String(sceneNum * 5).padStart(2, '0')}`,
-        visual: visualMatch ? cleanCell(visualMatch[1]) : '',
-        audio: audioMatch ? cleanCell(audioMatch[1]) : '',
-        sfx: '',
-        aiPrompt: promptMatch ? cleanCell(promptMatch[1]) : '',
+      console.log(`[Parser] Scene ${scene.scene}:`, { 
+        timing: scene.timing, 
+        visual: scene.visual.substring(0, 50) + (scene.visual.length > 50 ? '...' : ''),
+        audio: scene.audio.substring(0, 50) + (scene.audio.length > 50 ? '...' : '')
       });
+      
+      scenes.push(scene);
     }
   }
   
+  // FALLBACK: Try markdown table parsing if no block-tag scenes found
+  if (scenes.length === 0) {
+    console.log('[Parser] No block-tag scenes found, trying markdown table fallback...');
+    
+    const lines = storyboardContent.split('\n');
+    const tableRows: string[] = [];
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('|') && !trimmed.match(/^\|[\s\-:]+\|$/)) {
+        if (trimmed.replace(/\|/g, '').trim().length > 0) {
+          tableRows.push(trimmed);
+        }
+      }
+    }
+    
+    if (tableRows.length > 1) {
+      // Skip header row
+      for (let i = 1; i < tableRows.length; i++) {
+        const cells = tableRows[i].split('|').filter(c => c.trim() !== '');
+        if (cells.length >= 4) {
+          const firstCell = cleanCell(cells[0]);
+          const sceneNumMatch = firstCell.match(/(\d+)/);
+          const sceneNum = sceneNumMatch ? parseInt(sceneNumMatch[1]) : scenes.length + 1;
+          
+          scenes.push({
+            scene: sceneNum,
+            timing: cells.length > 4 ? cleanCell(cells[1]) : firstCell.replace(/\d+/g, '').trim() || `Scene ${sceneNum}`,
+            visual: cleanCell(cells[cells.length > 4 ? 2 : 1]) || 'TBD',
+            audio: cleanCell(cells[cells.length > 4 ? 3 : 2]) || 'TBD',
+            sfx: cells.length > 5 ? cleanCell(cells[4]) : '—',
+            aiPrompt: cleanCell(cells[cells.length - 1]) || 'TBD'
+          });
+        }
+      }
+    }
+  }
+  
+  console.log(`[Parser] Total scenes parsed: ${scenes.length}`);
   return scenes;
 }
 
