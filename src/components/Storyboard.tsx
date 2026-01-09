@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Mic, Volume2, Sparkles, Copy, Check, ChevronDown, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { DirectorTipToggle } from './DirectorTips';
 
 // Local interface to avoid circular imports
 export interface StoryboardScene {
@@ -132,6 +133,9 @@ const SceneCard = ({ scene, index }: { scene: StoryboardScene; index: number }) 
               </>
             )}
           </motion.button>
+          
+          {/* Director's Tip Toggle */}
+          <DirectorTipToggle sceneNumber={scene.scene} />
         </div>
       </div>
 
@@ -223,6 +227,9 @@ const SceneCard = ({ scene, index }: { scene: StoryboardScene; index: number }) 
                       </>
                     )}
                   </motion.button>
+                  
+                  {/* Director's Tip Toggle for Mobile */}
+                  <DirectorTipToggle sceneNumber={scene.scene} />
                 </div>
               </div>
             </motion.div>

@@ -14,6 +14,9 @@ import { DirectorSummary } from './DirectorSummary';
 import { MasterPromptCenter } from './MasterPromptCenter';
 import { CreatorJourneyBar } from './CreatorJourneyBar';
 import { TrendRadar } from './TrendRadar';
+import { RetentionHeatmap } from './RetentionHeatmap';
+import { SoundPalette } from './SoundPalette';
+import { FinalVerdictBadge } from './FinalVerdictBadge';
 import { useToast } from '@/hooks/use-toast';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
 
@@ -328,12 +331,25 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
 
         {/* Director's Storyboard */}
         {parsedData && parsedData.scenes.length > 0 && (
-          <Storyboard scenes={parsedData.scenes} />
+          <>
+            <Storyboard scenes={parsedData.scenes} />
+            
+            {/* Retention Heatmap - After Storyboard */}
+            <RetentionHeatmap />
+            
+            {/* Sound Design Palette */}
+            <SoundPalette />
+          </>
         )}
 
-        {/* Master Prompt Command Center - Always last */}
+        {/* Master Prompt Command Center - Always last before verdict */}
         {parsedData && parsedData.masterPrompt && (
           <MasterPromptCenter masterPrompt={parsedData.masterPrompt} />
+        )}
+
+        {/* Final Verdict Badge - Appears after all content */}
+        {parsedData && parsedData.hasStructuredData && (
+          <FinalVerdictBadge type="tiktok" loopTechnique={true} />
         )}
 
         {/* Raw Result - Only show if no structured data was parsed, or show filtered content */}
