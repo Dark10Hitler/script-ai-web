@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
-import { Coins, RefreshCw, Zap, Key, Loader2 } from 'lucide-react';
+import { Coins, RefreshCw, Zap, Key, Loader2, Plus } from 'lucide-react';
 import { useBalanceContext } from '@/contexts/BalanceContext';
 import { useState, useEffect } from 'react';
+import { addCredits } from '@/lib/scenarioApi';
+import { useToast } from '@/hooks/use-toast';
 
 interface BalanceHeaderProps {
   userId: string;
@@ -11,9 +13,25 @@ interface BalanceHeaderProps {
 }
 
 export const BalanceHeader = ({ userId, onRefresh, onTopUp, onShowRecovery }: BalanceHeaderProps) => {
-  const { balance, isLoading, isColdStart } = useBalanceContext();
+  const { balance, isLoading, isColdStart, fetchBalance } = useBalanceContext();
   const [isPulsing, setIsPulsing] = useState(false);
   const [prevBalance, setPrevBalance] = useState<number | null>(null);
+  const [isAddingCredits, setIsAddingCredits] = useState(false);
+  const { toast } = useToast();
+
+  const handleAddCredits = async () => {
+    if (!userId || isAddingCredits) return;
+    setIsAddingCredits(true);
+    try {
+      await addCredits(userId, 5);
+      await fetchBalance();
+      toast({ title: '+5 Credits Added!', description: 'Your balance has been updated.' });
+    } catch (error) {
+      toast({ title: 'Failed to add credits', variant: 'destructive' });
+    } finally {
+      setIsAddingCredits(false);
+    }
+  };
 
   // Detect balance changes and trigger pulse animation
   useEffect(() => {
@@ -86,6 +104,15 @@ export const BalanceHeader = ({ userId, onRefresh, onTopUp, onShowRecovery }: Ba
           >
             <Key className="w-4 h-4" />
             <span className="hidden sm:inline">Recover</span>
+          </button>
+
+          <button
+            onClick={handleAddCredits}
+            disabled={isAddingCredits}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-400 text-sm font-medium transition-all disabled:opacity-50"
+          >
+            {isAddingCredits ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            <span className="hidden sm:inline">+5</span>
           </button>
 
           <button

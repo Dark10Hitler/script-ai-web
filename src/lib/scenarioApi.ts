@@ -13,6 +13,20 @@ export interface GenerateError extends Error {
   serverMessage?: string;
 }
 
+export const addCredits = async (userId: string, amount: number): Promise<{ balance: number }> => {
+  const response = await fetch(`${API_BASE}/add_credits`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, amount }),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to add credits');
+  }
+  
+  return response.json();
+};
+
 export const generateScenario = async (
   userId: string,
   prompt: string
