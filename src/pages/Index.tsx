@@ -6,6 +6,7 @@ import { ScenarioGenerator } from "@/components/ScenarioGenerator";
 import { BrowserWarning } from "@/components/BrowserWarning";
 import { RecoveryModal } from "@/components/RecoveryModal";
 import { BalanceProvider } from "@/contexts/BalanceContext";
+import { GamificationProvider } from "@/contexts/GamificationContext";
 import { useUserId } from "@/hooks/useUserId";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -58,12 +59,14 @@ const Index = () => {
 
         {/* Scenario Generator */}
         {userId ? (
-          <BalanceProvider userId={userId}>
-            <ScenarioGenerator 
-              userId={userId} 
-              onShowRecovery={handleShowRecovery}
-            />
-          </BalanceProvider>
+          <GamificationProvider>
+            <BalanceProvider userId={userId}>
+              <ScenarioGenerator 
+                userId={userId} 
+                onShowRecovery={handleShowRecovery}
+              />
+            </BalanceProvider>
+          </GamificationProvider>
         ) : (
           <div className="flex items-center justify-center min-h-screen">
             <motion.div
