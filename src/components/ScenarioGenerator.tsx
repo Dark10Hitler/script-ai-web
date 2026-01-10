@@ -1,24 +1,30 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, memo, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { Wand2, Loader2, AlertCircle, Copy, Check } from 'lucide-react';
 import { useBalanceContext } from '@/contexts/BalanceContext';
+import { useGamification } from '@/contexts/GamificationContext';
 import { generateScenario } from '@/lib/scenarioApi';
 import { parseAIResponse } from '@/lib/aiResponseParser';
 import { BalanceHeader } from './BalanceHeader';
 import { ScenarioResult } from './ScenarioResult';
 import { NeuralProgress } from './NeuralProgress';
 import { PricingModal } from './PricingModal';
-import { HookMatrix } from './HookMatrix';
-import { Storyboard } from './Storyboard';
-import { DirectorSummary } from './DirectorSummary';
-import { MasterPromptCenter } from './MasterPromptCenter';
 import { CreatorJourneyBar } from './CreatorJourneyBar';
-import { TrendRadar } from './TrendRadar';
-import { RetentionHeatmap } from './RetentionHeatmap';
-import { SoundPalette } from './SoundPalette';
-import { FinalVerdictBadge } from './FinalVerdictBadge';
+import { LevelUpCelebration } from './LevelUpCelebration';
+import { GenerationSkeleton } from './GenerationSkeleton';
+import { CommunityFeedback } from './CommunityFeedback';
 import { useToast } from '@/hooks/use-toast';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
+
+// Lazy load heavy components for performance
+const TrendRadar = lazy(() => import('./TrendRadar').then(m => ({ default: m.TrendRadar })));
+const HookMatrix = lazy(() => import('./HookMatrix').then(m => ({ default: m.HookMatrix })));
+const Storyboard = lazy(() => import('./Storyboard').then(m => ({ default: m.Storyboard })));
+const DirectorSummary = lazy(() => import('./DirectorSummary').then(m => ({ default: m.DirectorSummary })));
+const MasterPromptCenter = lazy(() => import('./MasterPromptCenter').then(m => ({ default: m.MasterPromptCenter })));
+const RetentionHeatmap = lazy(() => import('./RetentionHeatmap').then(m => ({ default: m.RetentionHeatmap })));
+const SoundPalette = lazy(() => import('./SoundPalette').then(m => ({ default: m.SoundPalette })));
+const FinalVerdictBadge = lazy(() => import('./FinalVerdictBadge').then(m => ({ default: m.FinalVerdictBadge })));
 
 // Local interface definitions
 interface HookVariant {
@@ -63,8 +69,23 @@ interface ScenarioGeneratorProps {
   onShowRecovery: () => void;
 }
 
-export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorProps) => {
+// Simple loading fallback for lazy components
+const LazyFallback = () => (
+  <div className="glass-card rounded-2xl p-6 animate-pulse">
+    <div className="h-6 bg-muted/50 rounded w-1/3 mb-4" />
+    <div className="h-32 bg-muted/30 rounded" />
+  </div>
+);
+
+export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGeneratorProps) => {
   const { balance, isLoading: balanceLoading, fetchBalance } = useBalanceContext();
+  const { 
+    streak, currentXP, maxXP, level, rank, nextRank,
+    addXP, incrementStreak, 
+    showFloatingXP, floatingXPAmount,
+    levelUpCelebration, newLevelRank, dismissLevelUp 
+  } = useGamification();
+  
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [parsedData, setParsedData] = useState<ParsedAIResponse | null>(null);
@@ -75,11 +96,6 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
   const { toast } = useToast();
   const { placeholder, isVisible } = useRotatingPlaceholder();
   const generatorRef = useRef<HTMLDivElement>(null);
-
-  // Mock gamification data (ready for backend integration)
-  const [streak] = useState(3);
-  const [currentXP] = useState(350);
-  const [level] = useState(4);
 
   const handleQuickGenerate = (topicPrompt: string) => {
     setPrompt(topicPrompt);
@@ -154,6 +170,10 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
         setParsedData(parsed);
       }
       
+      // Award XP on successful generation
+      addXP(50);
+      incrementStreak();
+      
       await fetchBalance();
     } catch (error: any) {
       console.error('Generation error:', error);
@@ -203,6 +223,14 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
 
   return (
     <div className="min-h-screen p-4 md:p-8 pt-20 md:pt-8">
+      {/* Level Up Celebration */}
+      <LevelUpCelebration
+        isVisible={levelUpCelebration}
+        level={level}
+        rank={newLevelRank}
+        onDismiss={dismissLevelUp}
+      />
+
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <motion.div
@@ -222,14 +250,18 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
         <CreatorJourneyBar
           streak={streak}
           currentXP={currentXP}
-          maxXP={500}
+          maxXP={maxXP}
           level={level}
-          rank="Content Padawan"
-          nextRank="Viral Lord"
+          rank={rank}
+          nextRank={nextRank}
+          showFloatingXP={showFloatingXP}
+          floatingXPAmount={floatingXPAmount}
         />
 
         {/* Trend Radar - Daily Inspiration */}
-        <TrendRadar onQuickGenerate={handleQuickGenerate} />
+        <Suspense fallback={<LazyFallback />}>
+          <TrendRadar onQuickGenerate={handleQuickGenerate} />
+        </Suspense>
 
         {/* Balance Header */}
         <BalanceHeader
@@ -310,46 +342,63 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
           )}
         </motion.div>
 
-        {/* Neural Processing Animation */}
+        {/* Neural Processing Animation OR Skeleton Loader */}
         {isGenerating && (
-          <NeuralProgress isColdStart={generationColdStart} />
+          <>
+            <NeuralProgress isColdStart={generationColdStart} />
+            <GenerationSkeleton />
+          </>
         )}
 
         {/* Director's Summary with PDF Download */}
         {parsedData && parsedData.hasStructuredData && (
-          <DirectorSummary 
-            hooks={parsedData.hooks} 
-            scenes={parsedData.scenes}
-            userId={userId}
-          />
+          <Suspense fallback={<LazyFallback />}>
+            <DirectorSummary 
+              hooks={parsedData.hooks} 
+              scenes={parsedData.scenes}
+              userId={userId}
+            />
+          </Suspense>
         )}
 
         {/* Viral Hook Matrix */}
         {parsedData && parsedData.hooks.length > 0 && (
-          <HookMatrix hooks={parsedData.hooks} />
+          <Suspense fallback={<LazyFallback />}>
+            <HookMatrix hooks={parsedData.hooks} />
+          </Suspense>
         )}
 
         {/* Director's Storyboard */}
         {parsedData && parsedData.scenes.length > 0 && (
           <>
-            <Storyboard scenes={parsedData.scenes} />
+            <Suspense fallback={<LazyFallback />}>
+              <Storyboard scenes={parsedData.scenes} />
+            </Suspense>
             
             {/* Retention Heatmap - After Storyboard */}
-            <RetentionHeatmap />
+            <Suspense fallback={<LazyFallback />}>
+              <RetentionHeatmap />
+            </Suspense>
             
             {/* Sound Design Palette */}
-            <SoundPalette />
+            <Suspense fallback={<LazyFallback />}>
+              <SoundPalette />
+            </Suspense>
           </>
         )}
 
         {/* Master Prompt Command Center - Always last before verdict */}
         {parsedData && parsedData.masterPrompt && (
-          <MasterPromptCenter masterPrompt={parsedData.masterPrompt} />
+          <Suspense fallback={<LazyFallback />}>
+            <MasterPromptCenter masterPrompt={parsedData.masterPrompt} />
+          </Suspense>
         )}
 
         {/* Final Verdict Badge - Appears after all content */}
         {parsedData && parsedData.hasStructuredData && (
-          <FinalVerdictBadge type="tiktok" loopTechnique={true} />
+          <Suspense fallback={<LazyFallback />}>
+            <FinalVerdictBadge type="tiktok" loopTechnique={true} />
+          </Suspense>
         )}
 
         {/* Raw Result - Only show if no structured data was parsed, or show filtered content */}
@@ -376,6 +425,9 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
             <ScenarioResult content={result} hideStructuredBlocks={false} />
           </div>
         )}
+
+        {/* Community Feedback Section */}
+        <CommunityFeedback />
       </div>
 
       {/* Pricing Modal */}
@@ -386,4 +438,6 @@ export const ScenarioGenerator = ({ userId, onShowRecovery }: ScenarioGeneratorP
       />
     </div>
   );
-};
+});
+
+ScenarioGenerator.displayName = 'ScenarioGenerator';
