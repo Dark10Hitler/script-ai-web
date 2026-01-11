@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const STORAGE_KEY = 'scriptai_gamification';
 
@@ -36,8 +37,10 @@ const getMaxXP = (level: number): number => {
 interface GamificationState {
   level: number;
   currentXP: number;
+  totalXP: number;
   maxXP: number;
   streak: number;
+  scriptsGenerated: number;
   lastGenerationDate: string | null;
 }
 
@@ -51,6 +54,8 @@ interface GamificationContextType extends GamificationState {
   levelUpCelebration: boolean;
   newLevelRank: string;
   dismissLevelUp: () => void;
+  userId: string | null;
+  setUserId: (id: string) => void;
 }
 
 const GamificationContext = createContext<GamificationContextType | undefined>(undefined);
@@ -58,8 +63,10 @@ const GamificationContext = createContext<GamificationContextType | undefined>(u
 const getDefaultState = (): GamificationState => ({
   level: 1,
   currentXP: 0,
+  totalXP: 0,
   maxXP: 100,
   streak: 0,
+  scriptsGenerated: 0,
   lastGenerationDate: null,
 });
 
@@ -90,6 +97,7 @@ const saveToStorage = (state: GamificationState) => {
 
 export const GamificationProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<GamificationState>(loadFromStorage);
+  const [userId, setUserIdState] = useState<string | null>(null);
   const [showFloatingXP, setShowFloatingXP] = useState(false);
   const [floatingXPAmount, setFloatingXPAmount] = useState(0);
   const [levelUpCelebration, setLevelUpCelebration] = useState(false);
@@ -100,6 +108,39 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
     saveToStorage(state);
   }, [state]);
 
+  // Sync to database when userId is set
+  const syncToDatabase = useCallback(async (newState: GamificationState, uid: string) => {
+    if (!uid) return;
+    
+    try {
+      const { error } = await supabase
+        .from('user_stats')
+        .upsert({
+          user_id: uid,
+          level: newState.level,
+          current_xp: newState.currentXP,
+          total_xp: newState.totalXP,
+          streak: newState.streak,
+          scripts_generated: newState.scriptsGenerated,
+          last_generation_date: newState.lastGenerationDate,
+        }, {
+          onConflict: 'user_id',
+        });
+
+      if (error) {
+        console.error('Error syncing to database:', error);
+      }
+    } catch (e) {
+      console.error('Failed to sync gamification data:', e);
+    }
+  }, []);
+
+  const setUserId = useCallback((id: string) => {
+    setUserIdState(id);
+    // Initial sync when userId is set
+    syncToDatabase(state, id);
+  }, [state, syncToDatabase]);
+
   const addXP = useCallback((amount: number) => {
     let leveledUp = false;
     let finalLevel = state.level;
@@ -108,6 +149,8 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
       let newXP = prev.currentXP + amount;
       let newLevel = prev.level;
       let newMaxXP = prev.maxXP;
+      const newTotalXP = prev.totalXP + amount;
+      const newScriptsGenerated = prev.scriptsGenerated + 1;
 
       // Check for level up
       while (newXP >= newMaxXP) {
@@ -124,12 +167,21 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
         setLevelUpCelebration(true);
       }
 
-      return {
+      const newState = {
         ...prev,
         currentXP: newXP,
         level: newLevel,
         maxXP: newMaxXP,
+        totalXP: newTotalXP,
+        scriptsGenerated: newScriptsGenerated,
       };
+
+      // Sync to database
+      if (userId) {
+        syncToDatabase(newState, userId);
+      }
+
+      return newState;
     });
 
     // Show floating XP animation
@@ -138,7 +190,7 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
     setTimeout(() => setShowFloatingXP(false), 1500);
 
     return { leveledUp, newLevel: finalLevel };
-  }, [state.level]);
+  }, [state.level, userId, syncToDatabase]);
 
   const incrementStreak = useCallback(() => {
     const today = new Date().toDateString();
@@ -161,13 +213,20 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
         newStreak = prev.streak + 1;
       }
 
-      return {
+      const newState = {
         ...prev,
         streak: newStreak,
         lastGenerationDate: today,
       };
+
+      // Sync to database
+      if (userId) {
+        syncToDatabase(newState, userId);
+      }
+
+      return newState;
     });
-  }, []);
+  }, [userId, syncToDatabase]);
 
   const dismissLevelUp = useCallback(() => {
     setLevelUpCelebration(false);
@@ -186,6 +245,8 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
         levelUpCelebration,
         newLevelRank,
         dismissLevelUp,
+        userId,
+        setUserId,
       }}
     >
       {children}
