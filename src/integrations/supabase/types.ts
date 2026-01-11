@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_stats: {
+        Row: {
+          created_at: string
+          current_xp: number
+          display_name: string | null
+          id: string
+          last_generation_date: string | null
+          level: number
+          scripts_generated: number
+          streak: number
+          total_xp: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_xp?: number
+          display_name?: string | null
+          id?: string
+          last_generation_date?: string | null
+          level?: number
+          scripts_generated?: number
+          streak?: number
+          total_xp?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_xp?: number
+          display_name?: string | null
+          id?: string
+          last_generation_date?: string | null
+          level?: number
+          scripts_generated?: number
+          streak?: number
+          total_xp?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

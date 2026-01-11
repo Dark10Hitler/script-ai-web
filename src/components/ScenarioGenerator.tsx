@@ -1,6 +1,7 @@
-import { useState, useRef, memo, lazy, Suspense } from 'react';
+import { useState, useRef, memo, lazy, Suspense, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Wand2, Loader2, AlertCircle, Copy, Check } from 'lucide-react';
+import { Wand2, Loader2, AlertCircle, Copy, Check, Trophy } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useBalanceContext } from '@/contexts/BalanceContext';
 import { useGamification } from '@/contexts/GamificationContext';
 import { generateScenario } from '@/lib/scenarioApi';
@@ -83,7 +84,8 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
     streak, currentXP, maxXP, level, rank, nextRank,
     addXP, incrementStreak, 
     showFloatingXP, floatingXPAmount,
-    levelUpCelebration, newLevelRank, dismissLevelUp 
+    levelUpCelebration, newLevelRank, dismissLevelUp,
+    setUserId
   } = useGamification();
   
   const [prompt, setPrompt] = useState('');
@@ -96,6 +98,13 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
   const { toast } = useToast();
   const { placeholder, isVisible } = useRotatingPlaceholder();
   const generatorRef = useRef<HTMLDivElement>(null);
+
+  // Set userId in gamification context for database sync
+  useEffect(() => {
+    if (userId) {
+      setUserId(userId);
+    }
+  }, [userId, setUserId]);
 
   const handleQuickGenerate = (topicPrompt: string) => {
     setPrompt(topicPrompt);

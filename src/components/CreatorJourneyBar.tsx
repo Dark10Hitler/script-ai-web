@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Lock, Sparkles, Trophy } from "lucide-react";
+import { Flame, Lock, Sparkles, Trophy, Crown } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { memo } from "react";
 
@@ -196,6 +197,27 @@ export const CreatorJourneyBar = memo(({
             <p className="text-xs text-muted-foreground">
               {level >= 5 ? "Ready to open!" : `Unlock at Level 5 (${5 - level} more)`}
             </p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Leaderboard Link */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link to="/leaderboard">
+              <motion.div
+                className="relative cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/30 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-primary" />
+                </div>
+              </motion.div>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p className="font-medium">🏆 Leaderboard</p>
+            <p className="text-xs text-muted-foreground">See top creators</p>
           </TooltipContent>
         </Tooltip>
       </div>
