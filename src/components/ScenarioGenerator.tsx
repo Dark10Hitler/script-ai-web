@@ -26,6 +26,7 @@ const MasterPromptCenter = lazy(() => import('./MasterPromptCenter').then(m => (
 const RetentionHeatmap = lazy(() => import('./RetentionHeatmap').then(m => ({ default: m.RetentionHeatmap })));
 const SoundPalette = lazy(() => import('./SoundPalette').then(m => ({ default: m.SoundPalette })));
 const FinalVerdictBadge = lazy(() => import('./FinalVerdictBadge').then(m => ({ default: m.FinalVerdictBadge })));
+const AdUnit = lazy(() => import('./AdUnit'));
 
 // Local interface definitions
 interface HookVariant {
@@ -377,6 +378,13 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
           </Suspense>
         )}
 
+        {/* Ad Unit - Between Hook Matrix and Storyboard */}
+        {parsedData && parsedData.hasStructuredData && (
+          <Suspense fallback={null}>
+            <AdUnit slot="1234567890" format="horizontal" />
+          </Suspense>
+        )}
+
         {/* Director's Storyboard */}
         {parsedData && parsedData.scenes.length > 0 && (
           <>
@@ -398,9 +406,16 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
 
         {/* Master Prompt Command Center - Always last before verdict */}
         {parsedData && parsedData.masterPrompt && (
-          <Suspense fallback={<LazyFallback />}>
-            <MasterPromptCenter masterPrompt={parsedData.masterPrompt} />
-          </Suspense>
+          <>
+            <Suspense fallback={<LazyFallback />}>
+              <MasterPromptCenter masterPrompt={parsedData.masterPrompt} />
+            </Suspense>
+            
+            {/* Ad Unit - Below Master Prompt */}
+            <Suspense fallback={null}>
+              <AdUnit slot="0987654321" format="auto" />
+            </Suspense>
+          </>
         )}
 
         {/* Final Verdict Badge - Appears after all content */}
