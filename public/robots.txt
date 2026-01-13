@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Allow: /cryptomus_ff093a1a.html
 
 Sitemap: https://aura-dialogue-stream.vercel.app/sitemap.xml

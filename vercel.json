@@ -1,0 +1,13 @@
+{
+  "cleanUrls": false,
+  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/cryptomus_ff093a1a.html",
+      "headers": [
+        { "key": "Content-Type", "value": "text/html" },
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, proxy-revalidate" }
+      ]
+    }
+  ]
+}
