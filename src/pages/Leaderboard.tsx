@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Flame, Zap, FileText, Crown, Medal, Award, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -45,7 +45,8 @@ const getPositionIcon = (position: number) => {
   }
 };
 
-const LeaderboardSkeleton = () => (
+// Memoized skeleton component
+const LeaderboardSkeleton = memo(() => (
   <div className="space-y-3">
     {[...Array(10)].map((_, i) => (
       <div key={i} className="glass-card rounded-xl p-4 flex items-center gap-4">
@@ -59,7 +60,93 @@ const LeaderboardSkeleton = () => (
       </div>
     ))}
   </div>
-);
+));
+
+LeaderboardSkeleton.displayName = 'LeaderboardSkeleton';
+
+// Memoized entry card - prevents re-renders when other entries update
+const LeaderboardEntryCard = memo(({ entry, index, sortBy }: { 
+  entry: LeaderboardEntry; 
+  index: number; 
+  sortBy: SortBy;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: 20 }}
+    transition={{ delay: index * 0.05 }}
+    // Removed 'layout' prop - use transform/opacity only for GPU acceleration
+    className={`glass-card rounded-xl p-4 flex items-center gap-4 border will-change-transform ${
+      index === 0 
+        ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.2)]' 
+        : index === 1 
+        ? 'border-gray-400/30' 
+        : index === 2 
+        ? 'border-amber-600/30' 
+        : 'border-border/50'
+    }`}
+  >
+    {/* Position */}
+    <div className="w-10 h-10 flex items-center justify-center">
+      {getPositionIcon(index + 1)}
+    </div>
+
+    {/* Avatar */}
+    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold ${
+      index === 0 
+        ? 'bg-gradient-to-br from-yellow-500/30 to-orange-500/30 border border-yellow-500/40' 
+        : 'bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20'
+    }`}>
+      {entry.display_name?.charAt(0).toUpperCase() || entry.user_id.substring(5, 7).toUpperCase()}
+    </div>
+
+    {/* Info */}
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-2">
+        <p className="font-semibold text-foreground truncate">
+          {entry.display_name || `Creator ${entry.user_id.substring(5, 13)}`}
+        </p>
+        {entry.streak > 0 && (
+          <div className="flex items-center gap-1 text-orange-400">
+            <Flame className="w-4 h-4" fill="currentColor" />
+            <span className="text-xs font-medium">{entry.streak}</span>
+          </div>
+        )}
+      </div>
+      <p className={`text-sm ${getRankColor(entry.level)}`}>
+        Lvl {entry.level} • {getRank(entry.level)}
+      </p>
+    </div>
+
+    {/* Stats */}
+    <div className="text-right">
+      {sortBy === 'xp' && (
+        <div className="flex items-center gap-1 text-primary">
+          <Zap className="w-4 h-4" />
+          <span className="font-bold">{entry.total_xp.toLocaleString()}</span>
+        </div>
+      )}
+      {sortBy === 'level' && (
+        <div className="flex items-center gap-1 text-primary">
+          <Trophy className="w-4 h-4" />
+          <span className="font-bold">Level {entry.level}</span>
+        </div>
+      )}
+      {sortBy === 'scripts' && (
+        <div className="flex items-center gap-1 text-primary">
+          <FileText className="w-4 h-4" />
+          <span className="font-bold">{entry.scripts_generated}</span>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">
+        {sortBy !== 'scripts' && `${entry.scripts_generated} scripts`}
+        {sortBy === 'scripts' && `${entry.total_xp.toLocaleString()} XP`}
+      </p>
+    </div>
+  </motion.div>
+));
+
+LeaderboardEntryCard.displayName = 'LeaderboardEntryCard';
 
 const Leaderboard = () => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
@@ -67,7 +154,7 @@ const Leaderboard = () => {
   const [sortBy, setSortBy] = useState<SortBy>('xp');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const orderColumn = sortBy === 'xp' ? 'total_xp' : sortBy === 'level' ? 'level' : 'scripts_generated';
@@ -90,11 +177,11 @@ const Leaderboard = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [sortBy]);
 
   useEffect(() => {
     fetchLeaderboard();
-  }, [sortBy]);
+  }, [fetchLeaderboard]);
 
   // Real-time subscription for live updates
   useEffect(() => {
@@ -116,7 +203,7 @@ const Leaderboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sortBy]);
+  }, [fetchLeaderboard]);
 
   const sortOptions: { key: SortBy; label: string; icon: React.ReactNode }[] = [
     { key: 'xp', label: 'Total XP', icon: <Zap className="w-4 h-4" /> },
@@ -203,84 +290,15 @@ const Leaderboard = () => {
               </Link>
             </motion.div>
           ) : (
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence mode="sync">
               <motion.div className="space-y-3">
                 {entries.map((entry, index) => (
-                  <motion.div
+                  <LeaderboardEntryCard
                     key={entry.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: index * 0.05 }}
-                    layout
-                    className={`glass-card rounded-xl p-4 flex items-center gap-4 border ${
-                      index === 0 
-                        ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.2)]' 
-                        : index === 1 
-                        ? 'border-gray-400/30' 
-                        : index === 2 
-                        ? 'border-amber-600/30' 
-                        : 'border-border/50'
-                    }`}
-                  >
-                    {/* Position */}
-                    <div className="w-10 h-10 flex items-center justify-center">
-                      {getPositionIcon(index + 1)}
-                    </div>
-
-                    {/* Avatar */}
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold ${
-                      index === 0 
-                        ? 'bg-gradient-to-br from-yellow-500/30 to-orange-500/30 border border-yellow-500/40' 
-                        : 'bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20'
-                    }`}>
-                      {entry.display_name?.charAt(0).toUpperCase() || entry.user_id.substring(5, 7).toUpperCase()}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-foreground truncate">
-                          {entry.display_name || `Creator ${entry.user_id.substring(5, 13)}`}
-                        </p>
-                        {entry.streak > 0 && (
-                          <div className="flex items-center gap-1 text-orange-400">
-                            <Flame className="w-4 h-4" fill="currentColor" />
-                            <span className="text-xs font-medium">{entry.streak}</span>
-                          </div>
-                        )}
-                      </div>
-                      <p className={`text-sm ${getRankColor(entry.level)}`}>
-                        Lvl {entry.level} • {getRank(entry.level)}
-                      </p>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="text-right">
-                      {sortBy === 'xp' && (
-                        <div className="flex items-center gap-1 text-primary">
-                          <Zap className="w-4 h-4" />
-                          <span className="font-bold">{entry.total_xp.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {sortBy === 'level' && (
-                        <div className="flex items-center gap-1 text-primary">
-                          <Trophy className="w-4 h-4" />
-                          <span className="font-bold">Level {entry.level}</span>
-                        </div>
-                      )}
-                      {sortBy === 'scripts' && (
-                        <div className="flex items-center gap-1 text-primary">
-                          <FileText className="w-4 h-4" />
-                          <span className="font-bold">{entry.scripts_generated}</span>
-                        </div>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {sortBy !== 'scripts' && `${entry.scripts_generated} scripts`}
-                        {sortBy === 'scripts' && `${entry.total_xp.toLocaleString()} XP`}
-                      </p>
-                    </div>
-                  </motion.div>
+                    entry={entry}
+                    index={index}
+                    sortBy={sortBy}
+                  />
                 ))}
               </motion.div>
             </AnimatePresence>
