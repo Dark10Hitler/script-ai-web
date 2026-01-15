@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-
-const API_BASE = 'https://scenaries.onrender.com';
+import { API_BASE_URL } from '@/lib/apiConfig';
 
 interface BalanceContextType {
   balance: number | null;
@@ -33,7 +32,7 @@ export const BalanceProvider = ({ children, userId }: { children: ReactNode; use
         setIsColdStart(true);
       }, 5000);
 
-      const response = await fetch(`${API_BASE}/get_balance/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/get_balance/${userId}`, {
         signal: controller.signal,
       });
       
@@ -42,7 +41,7 @@ export const BalanceProvider = ({ children, userId }: { children: ReactNode; use
       if (!response.ok) {
         if (response.status === 404) {
           // User not found - trigger registration with 10 free credits
-          const registerResponse = await fetch(`${API_BASE}/register`, {
+          const registerResponse = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId }),
