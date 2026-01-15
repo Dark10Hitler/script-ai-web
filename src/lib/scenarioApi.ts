@@ -1,4 +1,4 @@
-const API_BASE = 'https://scenaries.onrender.com';
+import { API_BASE_URL } from './apiConfig';
 
 export interface GenerateResponse {
   result?: string;
@@ -14,7 +14,7 @@ export interface GenerateError extends Error {
 }
 
 export const addCredits = async (userId: string, amount: number): Promise<{ balance: number }> => {
-  const response = await fetch(`${API_BASE}/add_credits`, {
+  const response = await fetch(`${API_BASE_URL}/add_credits`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_id: userId, amount }),
@@ -39,7 +39,7 @@ export const generateScenario = async (
   const timeoutId = setTimeout(() => controller.abort(), 60000);
   
   try {
-    const response = await fetch(`${API_BASE}/generate`, {
+    const response = await fetch(`${API_BASE_URL}/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

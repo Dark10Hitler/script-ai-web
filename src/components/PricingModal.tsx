@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Zap, Star, Crown, ExternalLink, RefreshCw, Shield, Timer, Sparkles, Check } from 'lucide-react';
 import { useBalanceContext } from '@/contexts/BalanceContext';
+import { getPaymentUrl } from '@/lib/apiConfig';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -125,8 +126,7 @@ export const PricingModal = ({ isOpen, onClose, userId }: PricingModalProps) => 
   const { fetchBalance, isLoading } = useBalanceContext();
 
   const handleBuy = (tier: typeof pricingTiers[0]) => {
-    const url = `https://t.me/EducationGPT_AIBot?start=${userId}`;
-    window.open(url, '_blank');
+    window.open(getPaymentUrl(userId), '_blank');
   };
 
   const handleCheckPayment = async () => {
