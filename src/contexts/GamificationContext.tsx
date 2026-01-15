@@ -142,6 +142,10 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
   }, [state, syncToDatabase]);
 
   const addXP = useCallback((amount: number) => {
+    // OPTIMISTIC UI: Show XP animation immediately before state update
+    setFloatingXPAmount(amount);
+    setShowFloatingXP(true);
+    
     let leveledUp = false;
     let finalLevel = state.level;
 
@@ -176,7 +180,7 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
         scriptsGenerated: newScriptsGenerated,
       };
 
-      // Sync to database
+      // Sync to database (non-blocking)
       if (userId) {
         syncToDatabase(newState, userId);
       }
@@ -184,9 +188,7 @@ export const GamificationProvider = ({ children }: { children: ReactNode }) => {
       return newState;
     });
 
-    // Show floating XP animation
-    setFloatingXPAmount(amount);
-    setShowFloatingXP(true);
+    // Hide floating XP after animation
     setTimeout(() => setShowFloatingXP(false), 1500);
 
     return { leveledUp, newLevel: finalLevel };

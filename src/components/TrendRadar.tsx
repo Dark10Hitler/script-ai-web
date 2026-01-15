@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, TrendingUp, Flame, Palette, ArrowRight, RefreshCw, Brain, Skull, Heart, Dumbbell, Coins, Sparkles, Mic, Shield } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
@@ -235,7 +235,106 @@ const getRandomTopics = (exclude: string[] = []): TrendTopic[] => {
   return shuffled.slice(0, 3);
 };
 
-export const TrendRadar = ({ onQuickGenerate }: TrendRadarProps) => {
+// Memoized topic card component
+const TopicCard = memo(({ topic, index, onQuickGenerate }: { 
+  topic: TrendTopic; 
+  index: number; 
+  onQuickGenerate: (prompt: string) => void;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, x: 50 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: -50 }}
+    transition={{ 
+      delay: index * 0.1,
+      duration: 0.3,
+      ease: "easeOut"
+    }}
+    // Removed 'layout' prop for GPU performance
+    className="glass-card border border-border/50 hover:border-primary/30 rounded-xl p-4 transition-all duration-300 group will-change-transform"
+  >
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-2">
+          <span className={`px-2 py-0.5 text-xs rounded-full border ${topic.tagColor}`}>
+            {topic.tag}
+          </span>
+          {index === 0 && (
+            <span className="px-2 py-0.5 text-xs bg-red-500/20 text-red-400 rounded-full border border-red-500/30 flex items-center gap-1">
+              <Flame className="w-3 h-3" /> Hot
+            </span>
+          )}
+        </div>
+        <h4 className="font-medium text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+          {topic.icon}
+          {topic.title}
+        </h4>
+      </div>
+      <Button
+        size="sm"
+        onClick={() => onQuickGenerate(topic.prompt)}
+        className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 gap-1 shrink-0"
+      >
+        <Zap className="w-3 h-3" />
+        Quick Generate
+        <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </Button>
+    </div>
+  </motion.div>
+));
+
+TopicCard.displayName = 'TopicCard';
+
+// Memoized radar chart component
+const RadarChartSection = memo(({ radarData }: { radarData: any[] }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ delay: 0.3 }}
+    className="glass-card border border-primary/20 rounded-2xl p-4"
+  >
+    <h3 className="text-sm font-medium text-muted-foreground mb-2">Trend Intensity Radar</h3>
+    <div className="h-[220px] relative">
+      <ResponsiveContainer width="100%" height="100%">
+        <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+          <PolarGrid 
+            stroke="hsl(var(--border))" 
+            strokeOpacity={0.3}
+          />
+          <PolarAngleAxis 
+            dataKey="subject" 
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+          />
+          <PolarRadiusAxis 
+            angle={90} 
+            domain={[0, 100]} 
+            tick={false}
+            axisLine={false}
+          />
+          <Radar
+            name="Trends"
+            dataKey="value"
+            stroke="hsl(var(--primary))"
+            fill="hsl(var(--primary))"
+            fillOpacity={0.3}
+            strokeWidth={2}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+      {/* Animated pulse overlay - GPU accelerated */}
+      <motion.div
+        className="absolute inset-0 rounded-full border border-primary/20 pointer-events-none will-change-transform"
+        style={{ margin: "auto", width: "60%", height: "60%", transform: "translateZ(0)" }}
+        animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.2, 0.5] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  </motion.div>
+));
+
+RadarChartSection.displayName = 'RadarChartSection';
+
+export const TrendRadar = memo(({ onQuickGenerate }: TrendRadarProps) => {
   const [currentTopics, setCurrentTopics] = useState<TrendTopic[]>(() => getRandomTopics());
   const [radarData, setRadarData] = useState(() => generateRadarData(currentTopics));
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -287,6 +386,8 @@ export const TrendRadar = ({ onQuickGenerate }: TrendRadarProps) => {
           <motion.div
             animate={{ rotate: [0, 15, -15, 0] }}
             transition={{ duration: 2, repeat: Infinity }}
+            className="will-change-transform"
+            style={{ transform: "translateZ(0)" }}
           >
             <Zap className="w-5 h-5 text-yellow-400" />
           </motion.div>
@@ -311,6 +412,7 @@ export const TrendRadar = ({ onQuickGenerate }: TrendRadarProps) => {
           <motion.div
             animate={isRefreshing ? { rotate: 360 } : { rotate: 0 }}
             transition={{ duration: 0.6, ease: "easeInOut" }}
+            className="will-change-transform"
           >
             <RefreshCw className="w-4 h-4" />
           </motion.div>
@@ -320,99 +422,24 @@ export const TrendRadar = ({ onQuickGenerate }: TrendRadarProps) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Radar Chart */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="glass-card border border-primary/20 rounded-2xl p-4"
-        >
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Trend Intensity Radar</h3>
-          <div className="h-[220px] relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
-                <PolarGrid 
-                  stroke="hsl(var(--border))" 
-                  strokeOpacity={0.3}
-                />
-                <PolarAngleAxis 
-                  dataKey="subject" 
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-                />
-                <PolarRadiusAxis 
-                  angle={90} 
-                  domain={[0, 100]} 
-                  tick={false}
-                  axisLine={false}
-                />
-                <Radar
-                  name="Trends"
-                  dataKey="value"
-                  stroke="hsl(var(--primary))"
-                  fill="hsl(var(--primary))"
-                  fillOpacity={0.3}
-                  strokeWidth={2}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-            {/* Animated pulse overlay */}
-            <motion.div
-              className="absolute inset-0 rounded-full border border-primary/20 pointer-events-none"
-              style={{ margin: "auto", width: "60%", height: "60%" }}
-              animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.2, 0.5] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            />
-          </div>
-        </motion.div>
+        <RadarChartSection radarData={radarData} />
 
         {/* Topic Cards with AnimatePresence */}
         <div className="flex flex-col gap-3 overflow-hidden">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence mode="sync">
             {currentTopics.map((topic, index) => (
-              <motion.div
+              <TopicCard
                 key={topic.id}
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ 
-                  delay: index * 0.1,
-                  duration: 0.3,
-                  ease: "easeOut"
-                }}
-                layout
-                className="glass-card border border-border/50 hover:border-primary/30 rounded-xl p-4 transition-all duration-300 group"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-0.5 text-xs rounded-full border ${topic.tagColor}`}>
-                        {topic.tag}
-                      </span>
-                      {index === 0 && (
-                        <span className="px-2 py-0.5 text-xs bg-red-500/20 text-red-400 rounded-full border border-red-500/30 flex items-center gap-1">
-                          <Flame className="w-3 h-3" /> Hot
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="font-medium text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
-                      {topic.icon}
-                      {topic.title}
-                    </h4>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => onQuickGenerate(topic.prompt)}
-                    className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 gap-1 shrink-0"
-                  >
-                    <Zap className="w-3 h-3" />
-                    Quick Generate
-                    <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </Button>
-                </div>
-              </motion.div>
+                topic={topic}
+                index={index}
+                onQuickGenerate={onQuickGenerate}
+              />
             ))}
           </AnimatePresence>
         </div>
       </div>
     </motion.div>
   );
-};
+});
+
+TrendRadar.displayName = 'TrendRadar';
