@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Zap, Star, Crown, ExternalLink, RefreshCw, Shield, Timer, Sparkles, Check } from 'lucide-react';
+import { X, Zap, Star, Crown, ExternalLink, RefreshCw, Shield, Timer, Sparkles, Check, Loader2 } from 'lucide-react';
 import { useBalanceContext } from '@/contexts/BalanceContext';
 import { getPaymentUrl } from '@/lib/apiConfig';
+import { toast } from 'sonner';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -126,6 +127,10 @@ export const PricingModal = ({ isOpen, onClose, userId }: PricingModalProps) => 
   const { fetchBalance, isLoading } = useBalanceContext();
 
   const handleBuy = (tier: typeof pricingTiers[0]) => {
+    toast.info(
+      "Please wait a moment while we generate your invoice. It usually takes about a minute. Thank you for your patience! ⏳✨",
+      { duration: 8000 }
+    );
     window.open(getPaymentUrl(userId), '_blank');
   };
 
