@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import AuroraBackground from '@/components/AuroraBackground';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import Footer from '@/components/Footer';
 
 interface LeaderboardEntry {
   id: string;
@@ -212,10 +213,10 @@ const Leaderboard = () => {
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden flex flex-col">
       <AuroraBackground />
 
-      <main className="relative z-10 p-4 md:p-8 pt-6">
+      <main className="relative z-10 p-4 md:p-8 pt-6 flex-1">
         <div className="max-w-3xl mx-auto">
           {/* Header */}
           <motion.div
@@ -305,6 +306,8 @@ const Leaderboard = () => {
           )}
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 };
