@@ -9,7 +9,7 @@ import { BalanceProvider } from "@/contexts/BalanceContext";
 import { GamificationProvider } from "@/contexts/GamificationContext";
 import { useUserId } from "@/hooks/useUserId";
 import { Toaster } from "@/components/ui/toaster";
-
+import Footer from "@/components/Footer";
 const Index = () => {
   const { userId, needsRecovery, recoverAccount, showRecovery, hideRecovery } = useUserId();
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
@@ -22,7 +22,7 @@ const Index = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden flex flex-col">
       {/* SEO */}
       <title>AI Script Generator - Create Viral Content</title>
       <meta name="description" content="Generate professional scripts for TikTok, YouTube Shorts, and Instagram Reels with AI powered by Claude 3.5 Sonnet" />
@@ -37,7 +37,7 @@ const Index = () => {
       <Toaster />
 
       {/* Main Content */}
-      <main className="relative z-10">
+      <main className="relative z-10 flex-1">
         {/* Header Logo */}
         <motion.header
           initial={{ opacity: 0, y: -20 }}
@@ -82,6 +82,9 @@ const Index = () => {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Recovery Modal */}
       <RecoveryModal
