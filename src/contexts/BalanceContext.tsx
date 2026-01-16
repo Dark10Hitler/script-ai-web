@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { API_BASE_URL } from '@/lib/apiConfig';
+import { API_BASE_URL, FREE_CREDIT_LIMIT } from '@/lib/apiConfig';
 
 interface BalanceContextType {
   balance: number | null;
   isLoading: boolean;
   error: string | null;
   isColdStart: boolean;
+  freeTierLimit: number;
   fetchBalance: () => Promise<void>;
 }
 
@@ -40,7 +41,7 @@ export const BalanceProvider = ({ children, userId }: { children: ReactNode; use
       
       if (!response.ok) {
         if (response.status === 404) {
-          // User not found - trigger registration with 10 free credits
+          // User not found - trigger registration with 3 free credits
           const registerResponse = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -48,7 +49,7 @@ export const BalanceProvider = ({ children, userId }: { children: ReactNode; use
           });
           
           if (registerResponse.ok) {
-            setBalance(10);
+            setBalance(FREE_CREDIT_LIMIT);
             return;
           }
         }
@@ -84,7 +85,7 @@ export const BalanceProvider = ({ children, userId }: { children: ReactNode; use
   }, [userId, fetchBalance]);
 
   return (
-    <BalanceContext.Provider value={{ balance, isLoading, error, isColdStart, fetchBalance }}>
+    <BalanceContext.Provider value={{ balance, isLoading, error, isColdStart, freeTierLimit: FREE_CREDIT_LIMIT, fetchBalance }}>
       {children}
     </BalanceContext.Provider>
   );

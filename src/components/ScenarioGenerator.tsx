@@ -14,6 +14,7 @@ import { CreatorJourneyBar } from './CreatorJourneyBar';
 import { LevelUpCelebration } from './LevelUpCelebration';
 import { GenerationSkeleton } from './GenerationSkeleton';
 import { CommunityFeedback } from './CommunityFeedback';
+import { ZeroCreditsOverlay } from './ZeroCreditsOverlay';
 import { useToast } from '@/hooks/use-toast';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
 
@@ -287,8 +288,13 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           ref={generatorRef}
-          className="glass-card-elevated rounded-2xl p-6"
+          className="glass-card-elevated rounded-2xl p-6 relative"
         >
+          {/* Zero Credits Overlay */}
+          {balance === 0 && !balanceLoading && (
+            <ZeroCreditsOverlay userId={userId} />
+          )}
+
           <label className="block text-sm font-medium text-foreground mb-3 tracking-wide">
             Describe your script idea
           </label>
@@ -299,12 +305,12 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
               onChange={(e) => setPrompt(e.target.value)}
               placeholder={placeholder}
               className={`w-full h-40 md:h-48 p-4 rounded-xl bg-background/50 border border-border/50 text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all duration-200 ${
-                isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+                isGenerating || balance === 0 ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               style={{
                 opacity: prompt ? 1 : isVisible ? 0.7 : 0.4,
               }}
-              disabled={isGenerating}
+              disabled={isGenerating || balance === 0}
             />
           </div>
 
@@ -317,7 +323,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
 
             <button
               onClick={handleGenerate}
-              disabled={isGenerating || !prompt.trim()}
+              disabled={isGenerating || !prompt.trim() || balance === 0}
               className="glow-button flex items-center gap-2 px-8 py-3 rounded-xl text-primary-foreground font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (
@@ -333,23 +339,6 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
               )}
             </button>
           </div>
-
-          {/* Low balance warning */}
-          {balance === 0 && !balanceLoading && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 p-4 rounded-xl bg-destructive/10 border border-destructive/30 flex items-start gap-3"
-            >
-              <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-destructive">No credits available</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Click "Top Up" to add credits and continue generating scripts.
-                </p>
-              </div>
-            </motion.div>
-          )}
         </motion.div>
 
         {/* Neural Processing Animation OR Skeleton Loader */}
