@@ -11,7 +11,7 @@ interface BalanceHeaderProps {
 }
 
 export const BalanceHeader = ({ userId, onRefresh, onTopUp, onShowRecovery }: BalanceHeaderProps) => {
-  const { balance, isLoading, isColdStart } = useBalanceContext();
+  const { balance, isLoading, isColdStart, freeTierLimit } = useBalanceContext();
   const [isPulsing, setIsPulsing] = useState(false);
   const [prevBalance, setPrevBalance] = useState<number | null>(null);
 
@@ -23,6 +23,11 @@ export const BalanceHeader = ({ userId, onRefresh, onTopUp, onShowRecovery }: Ba
     }
     setPrevBalance(balance);
   }, [balance, prevBalance]);
+
+  // Calculate progress percentage (capped at free tier limit for display)
+  const displayBalance = balance ?? 0;
+  const progressPercentage = Math.min((displayBalance / freeTierLimit) * 100, 100);
+  const isLowCredits = displayBalance > 0 && displayBalance <= 1;
 
   return (
     <motion.div
@@ -47,25 +52,56 @@ export const BalanceHeader = ({ userId, onRefresh, onTopUp, onShowRecovery }: Ba
           >
             <Coins className="w-6 h-6 text-primary" />
           </motion.div>
-          <div>
+          <div className="flex-1">
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Available Credits</p>
             <div className="flex items-center gap-2">
               {isLoading ? (
                 <Loader2 className="w-5 h-5 text-primary animate-spin" />
               ) : (
-                <motion.span 
-                  className={`text-3xl font-bold text-foreground ${isPulsing ? 'pulse-balance' : ''}`}
-                  key={balance}
-                  initial={{ scale: 1 }}
-                  animate={isPulsing ? { scale: [1, 1.2, 1] } : {}}
-                >
-                  {balance ?? 0}
-                </motion.span>
+                <>
+                  <motion.span 
+                    className={`text-3xl font-bold text-foreground ${isPulsing ? 'pulse-balance' : ''}`}
+                    key={balance}
+                    initial={{ scale: 1 }}
+                    animate={isPulsing ? { scale: [1, 1.2, 1] } : {}}
+                  >
+                    {displayBalance}
+                  </motion.span>
+                  {displayBalance <= freeTierLimit && (
+                    <span className="text-sm text-muted-foreground">/ {freeTierLimit}</span>
+                  )}
+                </>
               )}
               {isColdStart && (
                 <span className="text-xs text-accent animate-pulse">Loading...</span>
               )}
             </div>
+            
+            {/* Progress Bar */}
+            {displayBalance <= freeTierLimit && (
+              <div className="mt-2 w-full max-w-[160px]">
+                <div className="h-1.5 bg-secondary/50 rounded-full overflow-hidden">
+                  <motion.div
+                    className={`h-full rounded-full ${
+                      displayBalance === 0 
+                        ? 'bg-destructive' 
+                        : isLowCredits 
+                          ? 'bg-amber-500' 
+                          : 'bg-gradient-to-r from-primary to-accent'
+                    }`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercentage}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {displayBalance === 0 
+                    ? 'No credits remaining' 
+                    : `${displayBalance} credit${displayBalance !== 1 ? 's' : ''} remaining`
+                  }
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
