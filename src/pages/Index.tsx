@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useCallback, memo } from "react";
 import { Sparkles } from "lucide-react";
 import AuroraBackground from "@/components/AuroraBackground";
 import { ScenarioGenerator } from "@/components/ScenarioGenerator";
@@ -10,16 +9,17 @@ import { GamificationProvider } from "@/contexts/GamificationContext";
 import { useUserId } from "@/hooks/useUserId";
 import { Toaster } from "@/components/ui/toaster";
 import Footer from "@/components/Footer";
-const Index = () => {
+
+const Index = memo(() => {
   const { userId, needsRecovery, recoverAccount, showRecovery, hideRecovery } = useUserId();
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
 
-  const handleShowRecovery = () => setShowRecoveryModal(true);
-  const handleHideRecovery = () => setShowRecoveryModal(false);
-  const handleRecover = (id: string) => {
+  const handleShowRecovery = useCallback(() => setShowRecoveryModal(true), []);
+  const handleHideRecovery = useCallback(() => setShowRecoveryModal(false), []);
+  const handleRecover = useCallback((id: string) => {
     recoverAccount(id);
-    handleHideRecovery();
-  };
+    setShowRecoveryModal(false);
+  }, [recoverAccount]);
 
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col">
@@ -38,13 +38,12 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="relative z-10 flex-1">
-        {/* Header Logo */}
-        <motion.header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
+        {/* Header Logo - No animations */}
+        <header
           className="fixed top-4 left-4 z-20 flex items-center gap-3"
+          style={{ transform: 'translateZ(0)' }}
         >
-          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-[0_0_20px_hsl(185_100%_50%/0.15)]">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
             <Sparkles className="w-5 h-5 text-primary" />
           </div>
           <div className="hidden sm:block">
@@ -55,7 +54,7 @@ const Index = () => {
               Powered by Claude
             </p>
           </div>
-        </motion.header>
+        </header>
 
         {/* Scenario Generator */}
         {userId ? (
@@ -69,16 +68,12 @@ const Index = () => {
           </GamificationProvider>
         ) : (
           <div className="flex items-center justify-center min-h-screen">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center"
-            >
+            <div className="text-center">
               <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-8 h-8 text-primary animate-pulse" />
               </div>
               <p className="text-muted-foreground">Initializing...</p>
-            </motion.div>
+            </div>
           </div>
         )}
       </main>
@@ -94,6 +89,8 @@ const Index = () => {
       />
     </div>
   );
-};
+});
+
+Index.displayName = 'Index';
 
 export default Index;
