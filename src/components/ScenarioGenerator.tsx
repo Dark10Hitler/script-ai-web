@@ -16,6 +16,7 @@ import { CommunityFeedback } from './CommunityFeedback';
 import { ZeroCreditsOverlay } from './ZeroCreditsOverlay';
 import { useToast } from '@/hooks/use-toast';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
+import { ViralSuccessKit } from './ViralSuccessKit';
 
 // Lazy load heavy components for performance
 const TrendRadar = lazy(() => import('./TrendRadar').then(m => ({ default: m.TrendRadar })));
@@ -421,6 +422,9 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
             <ScenarioResult content={result} hideStructuredBlocks={false} />
           </div>
         )}
+
+        {/* Viral Success Kit - Hook Lab & Hashtag Engine */}
+        <ViralSuccessKit />
 
         {/* Community Feedback Section */}
         <CommunityFeedback />
