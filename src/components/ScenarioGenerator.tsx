@@ -1,6 +1,5 @@
-import { useState, useRef, memo, lazy, Suspense, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Wand2, Loader2, AlertCircle, Copy, Check, Trophy } from 'lucide-react';
+import { useState, useRef, memo, lazy, Suspense, useEffect, useCallback } from 'react';
+import { Wand2, Loader2, Copy, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useBalanceContext } from '@/contexts/BalanceContext';
 import { useGamification } from '@/contexts/GamificationContext';
@@ -72,13 +71,14 @@ interface ScenarioGeneratorProps {
   onShowRecovery: () => void;
 }
 
-// Simple loading fallback for lazy components
-const LazyFallback = () => (
-  <div className="glass-card rounded-2xl p-6 animate-pulse">
+// Minimal loading fallback
+const LazyFallback = memo(() => (
+  <div className="glass-card rounded-2xl p-6">
     <div className="h-6 bg-muted/50 rounded w-1/3 mb-4" />
     <div className="h-32 bg-muted/30 rounded" />
   </div>
-);
+));
+LazyFallback.displayName = 'LazyFallback';
 
 export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGeneratorProps) => {
   const { balance, isLoading: balanceLoading, fetchBalance } = useBalanceContext();
@@ -108,12 +108,12 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
     }
   }, [userId, setUserId]);
 
-  const handleQuickGenerate = (topicPrompt: string) => {
+  const handleQuickGenerate = useCallback((topicPrompt: string) => {
     setPrompt(topicPrompt);
-    generatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
+    generatorRef.current?.scrollIntoView({ behavior: 'auto', block: 'center' });
+  }, []);
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       toast({
         title: 'Empty Prompt',
@@ -147,14 +147,11 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
         return;
       }
       
-      // Extract content from various possible response formats
       const content = response.script || response.result || response.scenario || response.content || '';
       console.log('Raw content length:', content.length);
-      console.log('Content preview:', content.substring(0, 500));
       
       setResult(content);
       
-      // Parse for structured data using the advanced parser
       console.log('Parsing AI response...');
       const parsed = parseAIResponse(content);
       console.log('Parse results:', {
@@ -164,20 +161,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
         hasMasterPrompt: !!parsed.masterPrompt,
       });
       
-      // Log individual items for debugging
-      if (parsed.hooks.length > 0) {
-        console.log('Hooks:', parsed.hooks.map(h => ({ type: h.type, text: h.hookText.substring(0, 50) })));
-      }
-      if (parsed.scenes.length > 0) {
-        console.log('Scenes:', parsed.scenes.map(s => ({ scene: s.scene, visual: s.visual.substring(0, 50) })));
-      }
-      
-      // Always set parsed data if there's any structured content
-      if (parsed.hasStructuredData) {
-        setParsedData(parsed);
-      } else if (content.length > 50) {
-        // Even if parsing failed, show demo data for UX
-        console.log('No structured data found, using fallback demo data');
+      if (parsed.hasStructuredData || content.length > 50) {
         setParsedData(parsed);
       }
       
@@ -218,9 +202,9 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
       setIsGenerating(false);
       setGenerationColdStart(false);
     }
-  };
+  }, [prompt, balance, userId, toast, addXP, incrementStreak, fetchBalance]);
 
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     if (result) {
       await navigator.clipboard.writeText(result);
       setCopied(true);
@@ -230,7 +214,14 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
       });
       setTimeout(() => setCopied(false), 2000);
     }
-  };
+  }, [result, toast]);
+
+  const handlePromptChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setPrompt(e.target.value);
+  }, []);
+
+  const handleShowPricing = useCallback(() => setShowPricing(true), []);
+  const handleClosePricing = useCallback(() => setShowPricing(false), []);
 
   return (
     <div className="min-h-screen p-4 md:p-8 pt-20 md:pt-8">
@@ -243,19 +234,15 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
       />
 
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
+        {/* Header - No animations */}
+        <div className="text-center mb-8">
           <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight">
-            AI Script <span className="text-primary neon-text">Generator</span>
+            AI Script <span className="text-primary">Generator</span>
           </h1>
           <p className="text-muted-foreground text-lg">
-            Create viral scripts powered by <span className="text-accent neon-text-cyan">Claude 3.5 Sonnet</span>
+            Create viral scripts powered by <span className="text-accent">Claude 3.5 Sonnet</span>
           </p>
-        </motion.div>
+        </div>
 
         {/* Creator Journey Gamification Bar */}
         <CreatorJourneyBar
@@ -278,17 +265,15 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
         <BalanceHeader
           userId={userId}
           onRefresh={fetchBalance}
-          onTopUp={() => setShowPricing(true)}
+          onTopUp={handleShowPricing}
           onShowRecovery={onShowRecovery}
         />
 
-        {/* Generator Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+        {/* Generator Card - No motion */}
+        <div
           ref={generatorRef}
           className="glass-card-elevated rounded-2xl p-6 relative"
+          style={{ transform: 'translateZ(0)' }}
         >
           {/* Zero Credits Overlay */}
           {balance === 0 && !balanceLoading && (
@@ -302,9 +287,9 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
           <div className="relative">
             <textarea
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={handlePromptChange}
               placeholder={placeholder}
-              className={`w-full h-40 md:h-48 p-4 rounded-xl bg-background/50 border border-border/50 text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all duration-200 ${
+              className={`w-full h-40 md:h-48 p-4 rounded-xl bg-background/50 border border-border/50 text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors ${
                 isGenerating || balance === 0 ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               style={{
@@ -324,7 +309,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
             <button
               onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim() || balance === 0}
-              className="glow-button flex items-center gap-2 px-8 py-3 rounded-xl text-primary-foreground font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="glow-button flex items-center gap-2 px-8 py-3 rounded-xl text-primary-foreground font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (
                 <>
@@ -339,7 +324,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
               )}
             </button>
           </div>
-        </motion.div>
+        </div>
 
         {/* Neural Processing Animation OR Skeleton Loader */}
         {isGenerating && (
@@ -414,14 +399,12 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
           </Suspense>
         )}
 
-        {/* Raw Result - Only show if no structured data was parsed, or show filtered content */}
+        {/* Raw Result - Only show if no structured data was parsed */}
         {result && (!parsedData?.hasStructuredData) && (
           <div className="relative mt-6">
-            <motion.button
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
+            <button
               onClick={handleCopy}
-              className={`absolute top-10 right-8 z-10 flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary/80 hover:bg-secondary border border-border/50 text-foreground text-sm font-medium transition-all ${copied ? 'animate-haptic' : ''}`}
+              className={`absolute top-10 right-8 z-10 flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary/80 hover:bg-secondary border border-border text-foreground text-sm font-medium transition-colors ${copied ? 'pulse-balance' : ''}`}
             >
               {copied ? (
                 <>
@@ -434,7 +417,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
                   <span>Copy</span>
                 </>
               )}
-            </motion.button>
+            </button>
             <ScenarioResult content={result} hideStructuredBlocks={false} />
           </div>
         )}
@@ -446,7 +429,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
       {/* Pricing Modal */}
       <PricingModal
         isOpen={showPricing}
-        onClose={() => setShowPricing(false)}
+        onClose={handleClosePricing}
         userId={userId}
       />
     </div>
