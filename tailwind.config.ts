@@ -78,7 +78,6 @@ export default {
         "3xl": "calc(var(--radius) + 16px)",
       },
       keyframes: {
-        // Only essential keyframes for UI functionality
         "accordion-down": {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
@@ -87,11 +86,19 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "pulse": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.5" },
+        },
+        "spin": {
+          to: { transform: "rotate(360deg)" },
+        },
       },
       animation: {
-        // Minimal animations - only what's essential
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse": "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "spin": "spin 1s linear infinite",
       },
     },
   },
