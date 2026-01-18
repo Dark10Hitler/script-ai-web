@@ -1,25 +1,53 @@
 import { useState, useCallback, memo } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import AuroraBackground from "@/components/AuroraBackground";
 import { ScenarioGenerator } from "@/components/ScenarioGenerator";
 import { BrowserWarning } from "@/components/BrowserWarning";
 import { RecoveryModal } from "@/components/RecoveryModal";
-import { BalanceProvider } from "@/contexts/BalanceContext";
+import { AccessGate } from "@/components/AccessGate";
+import { UserHeader } from "@/components/UserHeader";
 import { GamificationProvider } from "@/contexts/GamificationContext";
-import { useUserId } from "@/hooks/useUserId";
+import { useAuth } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import Footer from "@/components/Footer";
 
 const Index = memo(() => {
-  const { userId, needsRecovery, recoverAccount, showRecovery, hideRecovery } = useUserId();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
 
   const handleShowRecovery = useCallback(() => setShowRecoveryModal(true), []);
   const handleHideRecovery = useCallback(() => setShowRecoveryModal(false), []);
   const handleRecover = useCallback((id: string) => {
-    recoverAccount(id);
+    // Recovery is now handled via AccessGate
     setShowRecoveryModal(false);
-  }, [recoverAccount]);
+  }, []);
+
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="relative min-h-screen overflow-hidden flex flex-col">
+        <AuroraBackground />
+        <div className="flex items-center justify-center min-h-screen relative z-10">
+          <div className="text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-4">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
+            <p className="text-muted-foreground">Verifying access...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access gate if not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="relative min-h-screen overflow-hidden">
+        <AuroraBackground />
+        <AccessGate />
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden flex flex-col">
@@ -35,6 +63,9 @@ const Index = memo(() => {
 
       {/* Toaster */}
       <Toaster />
+
+      {/* User Header - Shows username, ID, credits, logout */}
+      <UserHeader />
 
       {/* Main Content */}
       <main className="relative z-10 flex-1">
@@ -57,25 +88,12 @@ const Index = memo(() => {
         </header>
 
         {/* Scenario Generator */}
-        {userId ? (
-          <GamificationProvider>
-            <BalanceProvider userId={userId}>
-              <ScenarioGenerator 
-                userId={userId} 
-                onShowRecovery={handleShowRecovery}
-              />
-            </BalanceProvider>
-          </GamificationProvider>
-        ) : (
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-8 h-8 text-primary animate-pulse" />
-              </div>
-              <p className="text-muted-foreground">Initializing...</p>
-            </div>
-          </div>
-        )}
+        <GamificationProvider>
+          <ScenarioGenerator 
+            userId={user.lovable_id} 
+            onShowRecovery={handleShowRecovery}
+          />
+        </GamificationProvider>
       </main>
 
       {/* Footer */}
