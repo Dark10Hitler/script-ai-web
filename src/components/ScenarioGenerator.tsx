@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useBalanceContext } from '@/contexts/BalanceContext';
 import { useGamification } from '@/contexts/GamificationContext';
 import { generateScenario } from '@/lib/scenarioApi';
-import { parseAIResponse } from '@/lib/aiResponseParser';
+import { parseAIResponse, ParsedAIResponse, HookVariant, StoryboardScene, MasterPrompt, ViralHook, ParsedHashtags } from '@/lib/aiResponseParser';
 import { BalanceHeader } from './BalanceHeader';
 import { ScenarioResult } from './ScenarioResult';
 import { NeuralProgress } from './NeuralProgress';
@@ -28,44 +28,8 @@ const RetentionHeatmap = lazy(() => import('./RetentionHeatmap').then(m => ({ de
 const SoundPalette = lazy(() => import('./SoundPalette').then(m => ({ default: m.SoundPalette })));
 const FinalVerdictBadge = lazy(() => import('./FinalVerdictBadge').then(m => ({ default: m.FinalVerdictBadge })));
 const AdUnit = lazy(() => import('./AdUnit'));
-
-// Local interface definitions
-interface HookVariant {
-  type: 'aggressive' | 'intriguing' | 'visual';
-  title: string;
-  hookText: string;
-  retentionForecast: number;
-  mechanism: string;
-}
-
-interface StoryboardScene {
-  scene: number;
-  timing: string;
-  visual: string;
-  audio: string;
-  sfx: string;
-  aiPrompt: string;
-}
-
-interface MasterPrompt {
-  fullText: string;
-  role: string;
-  context: string;
-  imagePrompts: string[];
-  voiceSettings: {
-    stability: number;
-    clarity: number;
-    styleExaggeration: number;
-  };
-}
-
-interface ParsedAIResponse {
-  hooks: HookVariant[];
-  scenes: StoryboardScene[];
-  masterPrompt: MasterPrompt | null;
-  rawContent: string;
-  hasStructuredData: boolean;
-}
+const ParsedViralHooks = lazy(() => import('./ParsedViralHooks').then(m => ({ default: m.ParsedViralHooks })));
+const ParsedHashtagCloud = lazy(() => import('./ParsedHashtagCloud').then(m => ({ default: m.ParsedHashtagCloud })));
 
 interface ScenarioGeneratorProps {
   userId: string;
@@ -346,10 +310,24 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
           </Suspense>
         )}
 
-        {/* Viral Hook Matrix */}
+        {/* Viral Hook Matrix (structured hooks from БЛОК 1) */}
         {parsedData && parsedData.hooks.length > 0 && (
           <Suspense fallback={<LazyFallback />}>
             <HookMatrix hooks={parsedData.hooks} />
+          </Suspense>
+        )}
+
+        {/* Parsed Viral Hooks (emoji-based: 😱, 👀, 💎, 🔥, ⏳) */}
+        {parsedData && parsedData.viralHooks && parsedData.viralHooks.length > 0 && (
+          <Suspense fallback={<LazyFallback />}>
+            <ParsedViralHooks hooks={parsedData.viralHooks} />
+          </Suspense>
+        )}
+
+        {/* Parsed Hashtag Cloud */}
+        {parsedData && parsedData.hashtags && (
+          <Suspense fallback={<LazyFallback />}>
+            <ParsedHashtagCloud hashtags={parsedData.hashtags} />
           </Suspense>
         )}
 

@@ -1,21 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Sparkles, Brain, Target } from 'lucide-react';
+import { Zap, Sparkles, Brain, Target, Flame, Eye, Diamond, Clock } from 'lucide-react';
+import { HookVariant } from '@/lib/aiResponseParser';
 
-// Local interface to avoid circular imports
-export interface HookVariant {
-  type: 'aggressive' | 'intriguing' | 'visual';
-  title: string;
-  hookText: string;
-  retentionForecast: number;
-  mechanism: string;
-}
+// Re-export for backward compatibility
+export type { HookVariant };
 
 interface HookMatrixProps {
   hooks: HookVariant[];
 }
 
-const typeConfig = {
+const typeConfig: Record<string, { label: string; color: string; bgGlow: string; icon: typeof Zap }> = {
   aggressive: {
     label: 'Aggressive',
     color: 'from-red-500 to-orange-500',
@@ -33,6 +28,36 @@ const typeConfig = {
     color: 'from-accent to-emerald-400',
     bgGlow: 'rgba(6, 182, 212, 0.3)',
     icon: Target,
+  },
+  fear: {
+    label: 'Fear',
+    color: 'from-red-600 to-red-400',
+    bgGlow: 'rgba(220, 38, 38, 0.3)',
+    icon: Zap,
+  },
+  curiosity: {
+    label: 'Curiosity',
+    color: 'from-yellow-500 to-amber-400',
+    bgGlow: 'rgba(245, 158, 11, 0.3)',
+    icon: Eye,
+  },
+  controversy: {
+    label: 'Controversy',
+    color: 'from-orange-500 to-red-400',
+    bgGlow: 'rgba(249, 115, 22, 0.3)',
+    icon: Flame,
+  },
+  value: {
+    label: 'Value',
+    color: 'from-emerald-500 to-teal-400',
+    bgGlow: 'rgba(16, 185, 129, 0.3)',
+    icon: Diamond,
+  },
+  urgency: {
+    label: 'Urgency',
+    color: 'from-purple-500 to-violet-400',
+    bgGlow: 'rgba(139, 92, 246, 0.3)',
+    icon: Clock,
   },
 };
 
@@ -163,7 +188,7 @@ export const HookMatrix = ({ hooks }: HookMatrixProps) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5"
       >
         {hooks.map((hook, index) => {
-          const config = typeConfig[hook.type];
+          const config = typeConfig[hook.type] || typeConfig.intriguing;
           const Icon = config.icon;
           
           return (

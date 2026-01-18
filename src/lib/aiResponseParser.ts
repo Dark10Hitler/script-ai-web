@@ -1,12 +1,25 @@
 // AI Response Parser - Extracts structured blocks from AI-generated content
-// Robust parsing for БЛОК 1, БЛОК 2 (markdown tables), and БЛОК 3 (master prompt)
+// Supports: Viral Hooks (emoji markers), Hashtag Engine, Storyboard, Master Prompt
 
 export interface HookVariant {
-  type: 'aggressive' | 'intriguing' | 'visual';
+  type: 'aggressive' | 'intriguing' | 'visual' | 'fear' | 'curiosity' | 'controversy' | 'value' | 'urgency';
   title: string;
   hookText: string;
   retentionForecast: number;
   mechanism: string;
+}
+
+export interface ViralHook {
+  type: 'fear' | 'curiosity' | 'controversy' | 'value' | 'urgency';
+  emoji: string;
+  label: string;
+  text: string;
+}
+
+export interface ParsedHashtags {
+  broad: string[];
+  niche: string[];
+  trending: string[];
 }
 
 export interface StoryboardScene {
@@ -32,6 +45,8 @@ export interface MasterPrompt {
 
 export interface ParsedAIResponse {
   hooks: HookVariant[];
+  viralHooks: ViralHook[];
+  hashtags: ParsedHashtags | null;
   scenes: StoryboardScene[];
   masterPrompt: MasterPrompt | null;
   rawContent: string;
@@ -276,13 +291,19 @@ function parseScenes(content: string): StoryboardScene[] {
   return scenes;
 }
 
-// Parse master prompt from БЛОК 3 - continue parsing to end of response
+// Parse master prompt from БЛОК 3 or ### 🤖 COPY-PASTE FOR AI AGENT section
 function parseMasterPrompt(content: string): MasterPrompt | null {
-  // Look for БЛОК 3 section - must continue to the END of the response
+  // Look for Master Prompt section - various formats
   const block3Patterns = [
+    // New format: ### 🤖 COPY-PASTE FOR AI AGENT
+    /(?:###?\s*)?🤖\s*(?:COPY-PASTE\s*(?:FOR\s*)?AI\s*AGENT|УНИВЕРСАЛЬНЫЙ\s*ПРОМПТ)[:\s]*([\s\S]+)$/i,
+    // Standard БЛОК 3 format
     /БЛОК\s*3[:\s]*[^\n]*\n([\s\S]+)$/i,
     /(?:BLOCK|Block)\s*3[:\s]*[^\n]*\n([\s\S]+)$/i,
-    /(?:Master[\s\-]*Prompt|Copy-Paste|Универсальный промпт)[:\s]*\n([\s\S]+)$/i,
+    // Other common headers
+    /(?:Master[\s\-]*Prompt|God[\s\-]*Prompt|Copy-Paste|Универсальный промпт)[:\s]*\n([\s\S]+)$/i,
+    /(?:###?\s*)?(?:AI\s*AGENT|ПРОМПТ\s*ДЛЯ\s*AI)[:\s]*([\s\S]+)$/i,
+    // Code blocks
     /```(?:text|prompt)?\n([\s\S]*?)```/i,
   ];
   
@@ -363,11 +384,118 @@ function getDefaultImagePrompts(): string[] {
   ];
 }
 
+// Parse viral hooks with emoji markers (😱, 👀, 💎, 🔥, ⏳)
+function parseViralHooks(content: string): ViralHook[] {
+  const hooks: ViralHook[] = [];
+  
+  const emojiMap: { emoji: string; type: ViralHook['type']; label: string }[] = [
+    { emoji: '😱', type: 'fear', label: 'Fear' },
+    { emoji: '👀', type: 'curiosity', label: 'Curiosity' },
+    { emoji: '💎', type: 'value', label: 'Value' },
+    { emoji: '🔥', type: 'controversy', label: 'Controversy' },
+    { emoji: '⏳', type: 'urgency', label: 'Urgency' },
+  ];
+  
+  for (const { emoji, type, label } of emojiMap) {
+    // Match line starting with emoji, capture the rest of the line
+    const patterns = [
+      new RegExp(`${emoji}[\\s\\-:]*\\[?[^\\]]*\\]?[:\\s]*["«]?([^"»\\n]+)["»]?`, 'gm'),
+      new RegExp(`${emoji}[^\\n]+`, 'gm'),
+    ];
+    
+    for (const pattern of patterns) {
+      const matches = content.matchAll(pattern);
+      for (const match of matches) {
+        let text = match[1] || match[0].replace(emoji, '').trim();
+        // Clean up the text
+        text = text
+          .replace(/^\[.*?\]\s*/, '') // Remove bracketed labels
+          .replace(/^[:\-\s]+/, '')
+          .replace(/["«»]/g, '')
+          .trim();
+        
+        if (text.length > 10 && !hooks.find(h => h.type === type)) {
+          hooks.push({ type, emoji, label, text });
+          break;
+        }
+      }
+      if (hooks.find(h => h.type === type)) break;
+    }
+  }
+  
+  return hooks;
+}
+
+// Parse hashtags from ### 🏷️ SMART HASHTAG ENGINE section
+function parseHashtags(content: string): ParsedHashtags | null {
+  const result: ParsedHashtags = { broad: [], niche: [], trending: [] };
+  
+  // Find hashtag section
+  const hashtagPatterns = [
+    /(?:###?\s*)?🏷️\s*SMART\s*HASHTAG\s*ENGINE[\s\S]*?(?=###|$)/i,
+    /HASHTAG\s*(?:ENGINE|CLOUD)[\s\S]*?(?=###|🤖|COPY-PASTE|$)/i,
+    /(?:###?\s*)?(?:Hashtags?|Хэштеги)[\s\S]*?(?=###|🤖|$)/i,
+  ];
+  
+  let hashtagSection = '';
+  for (const pattern of hashtagPatterns) {
+    const match = content.match(pattern);
+    if (match) {
+      hashtagSection = match[0];
+      break;
+    }
+  }
+  
+  if (!hashtagSection) {
+    // Try to find any hashtags in the content
+    const allHashtags = content.match(/#[\wа-яА-Я]+/g);
+    if (allHashtags && allHashtags.length > 0) {
+      const uniqueTags = [...new Set(allHashtags.map(t => t.replace('#', '')))];
+      result.broad = uniqueTags.slice(0, 5);
+      result.niche = uniqueTags.slice(5, 12);
+      result.trending = uniqueTags.slice(12, 17);
+      return result;
+    }
+    return null;
+  }
+  
+  // Extract by category
+  const categoryPatterns = [
+    { key: 'broad' as const, patterns: [/(?:Broad|Широкие|High\s*Volume)[:\s]*([^\n]+(?:\n(?![A-Z]|Niche|Trend|Трендовые).*)*)/i] },
+    { key: 'niche' as const, patterns: [/(?:Niche|Нишевые|Targeted)[:\s]*([^\n]+(?:\n(?![A-Z]|Trend|Трендовые).*)*)/i] },
+    { key: 'trending' as const, patterns: [/(?:Trend|Трендовые|Algorithm)[:\s]*([^\n]+(?:\n(?![A-Z]).*)*)/i] },
+  ];
+  
+  for (const { key, patterns } of categoryPatterns) {
+    for (const pattern of patterns) {
+      const match = hashtagSection.match(pattern);
+      if (match && match[1]) {
+        const tags = match[1].match(/#[\wа-яА-Я0-9]+/g) || [];
+        result[key] = tags.map(t => t.replace('#', ''));
+        break;
+      }
+    }
+  }
+  
+  // If no categories found, extract all hashtags
+  if (result.broad.length === 0 && result.niche.length === 0 && result.trending.length === 0) {
+    const allTags = hashtagSection.match(/#[\wа-яА-Я0-9]+/g) || [];
+    const uniqueTags = [...new Set(allTags.map(t => t.replace('#', '')))];
+    result.broad = uniqueTags.slice(0, 5);
+    result.niche = uniqueTags.slice(5, 12);
+    result.trending = uniqueTags.slice(12, 17);
+  }
+  
+  return (result.broad.length > 0 || result.niche.length > 0 || result.trending.length > 0) ? result : null;
+}
+
 // Main parser function
 export function parseAIResponse(content: string): ParsedAIResponse {
   if (!content || typeof content !== 'string') {
     return {
       hooks: [],
+      viralHooks: [],
+      hashtags: null,
       scenes: [],
       masterPrompt: null,
       rawContent: '',
@@ -378,17 +506,27 @@ export function parseAIResponse(content: string): ParsedAIResponse {
   console.log('Parsing AI response, length:', content.length);
   
   const hooks = parseHooks(content);
+  const viralHooks = parseViralHooks(content);
+  const hashtags = parseHashtags(content);
   const scenes = parseScenes(content);
   const masterPrompt = parseMasterPrompt(content);
   
-  console.log('Parsed results:', { hooks: hooks.length, scenes: scenes.length, hasMasterPrompt: !!masterPrompt });
+  console.log('Parsed results:', { 
+    hooks: hooks.length, 
+    viralHooks: viralHooks.length,
+    hasHashtags: !!hashtags,
+    scenes: scenes.length, 
+    hasMasterPrompt: !!masterPrompt 
+  });
   
-  const hasStructuredData = hooks.length > 0 || scenes.length > 0 || masterPrompt !== null;
+  const hasStructuredData = hooks.length > 0 || viralHooks.length > 0 || hashtags !== null || scenes.length > 0 || masterPrompt !== null;
   
   // If no structured data found but content is long enough, generate demo data
   if (!hasStructuredData && content.length > 100) {
     return {
       hooks: generateDemoHooks(content),
+      viralHooks: [],
+      hashtags: null,
       scenes: generateDemoScenes(content),
       masterPrompt: generateDemoMasterPrompt(content),
       rawContent: content,
@@ -398,6 +536,8 @@ export function parseAIResponse(content: string): ParsedAIResponse {
   
   return {
     hooks,
+    viralHooks,
+    hashtags,
     scenes,
     masterPrompt,
     rawContent: content,
