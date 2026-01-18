@@ -1,11 +1,9 @@
 import { useState, useRef, memo, lazy, Suspense, useEffect, useCallback } from 'react';
-import { Wand2, Loader2, Copy, Check } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useBalanceContext } from '@/contexts/BalanceContext';
+import { Wand2, Loader2, Copy, Check, Coins, RefreshCw, MessageCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useGamification } from '@/contexts/GamificationContext';
 import { generateScenario } from '@/lib/scenarioApi';
 import { parseAIResponse, ParsedAIResponse, HookVariant, StoryboardScene, MasterPrompt, ViralHook, ParsedHashtags } from '@/lib/aiResponseParser';
-import { BalanceHeader } from './BalanceHeader';
 import { ScenarioResult } from './ScenarioResult';
 import { NeuralProgress } from './NeuralProgress';
 import { PricingModal } from './PricingModal';
@@ -17,6 +15,7 @@ import { ZeroCreditsOverlay } from './ZeroCreditsOverlay';
 import { useToast } from '@/hooks/use-toast';
 import { useRotatingPlaceholder } from '@/hooks/useRotatingPlaceholder';
 import { ViralSuccessKit } from './ViralSuccessKit';
+import { getPaymentUrl } from '@/lib/apiConfig';
 
 // Lazy load heavy components for performance
 const TrendRadar = lazy(() => import('./TrendRadar').then(m => ({ default: m.TrendRadar })));
@@ -46,7 +45,7 @@ const LazyFallback = memo(() => (
 LazyFallback.displayName = 'LazyFallback';
 
 export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGeneratorProps) => {
-  const { balance, isLoading: balanceLoading, fetchBalance } = useBalanceContext();
+  const { user, updateBalance, refreshProfile } = useAuth();
   const { 
     streak, currentXP, maxXP, level, rank, nextRank,
     addXP, incrementStreak, 
@@ -88,7 +87,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
       return;
     }
 
-    if (balance === 0) {
+    if ((user?.balance ?? 0) === 0) {
       setShowPricing(true);
       return;
     }
@@ -134,7 +133,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
       addXP(50);
       incrementStreak();
       
-      await fetchBalance();
+      await refreshProfile();
     } catch (error: any) {
       console.error('Generation error:', error);
       
@@ -167,7 +166,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
       setIsGenerating(false);
       setGenerationColdStart(false);
     }
-  }, [prompt, balance, userId, toast, addXP, incrementStreak, fetchBalance]);
+  }, [prompt, user?.balance, userId, toast, addXP, incrementStreak, refreshProfile]);
 
   const handleCopy = useCallback(async () => {
     if (result) {
@@ -226,13 +225,38 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
           <TrendRadar onQuickGenerate={handleQuickGenerate} />
         </Suspense>
 
-        {/* Balance Header */}
-        <BalanceHeader
-          userId={userId}
-          onRefresh={fetchBalance}
-          onTopUp={handleShowPricing}
-          onShowRecovery={onShowRecovery}
-        />
+        {/* Credits Display */}
+        <div className="glass-card rounded-2xl p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Coins className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Available Credits</p>
+                <p className="text-2xl font-bold text-foreground">{user?.balance ?? 0}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={refreshProfile}
+                className="p-2 rounded-xl bg-secondary/50 hover:bg-secondary border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
+                title="Refresh Credits"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+              <a
+                href={getPaymentUrl(userId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0088cc] text-white text-sm font-medium hover:bg-[#0088cc]/90 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Refill Credits</span>
+              </a>
+            </div>
+          </div>
+        </div>
 
         {/* Generator Card - No motion */}
         <div
@@ -241,7 +265,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
           style={{ transform: 'translateZ(0)' }}
         >
           {/* Zero Credits Overlay */}
-          {balance === 0 && !balanceLoading && (
+          {(user?.balance ?? 0) === 0 && (
             <ZeroCreditsOverlay userId={userId} />
           )}
 
@@ -255,12 +279,12 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
               onChange={handlePromptChange}
               placeholder={placeholder}
               className={`w-full h-40 md:h-48 p-4 rounded-xl bg-background/50 border border-border/50 text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors ${
-                isGenerating || balance === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                isGenerating || (user?.balance ?? 0) === 0 ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               style={{
                 opacity: prompt ? 1 : isVisible ? 0.7 : 0.4,
               }}
-              disabled={isGenerating || balance === 0}
+              disabled={isGenerating || (user?.balance ?? 0) === 0}
             />
           </div>
 
@@ -273,7 +297,7 @@ export const ScenarioGenerator = memo(({ userId, onShowRecovery }: ScenarioGener
 
             <button
               onClick={handleGenerate}
-              disabled={isGenerating || !prompt.trim() || balance === 0}
+              disabled={isGenerating || !prompt.trim() || (user?.balance ?? 0) === 0}
               className="glow-button flex items-center gap-2 px-8 py-3 rounded-xl text-primary-foreground font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (
