@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Zap, Star, Crown, ExternalLink, RefreshCw, Shield, Timer, Sparkles, Check, Loader2 } from 'lucide-react';
-import { useBalanceContext } from '@/contexts/BalanceContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { getPaymentUrl } from '@/lib/apiConfig';
 import { toast } from 'sonner';
 
@@ -124,7 +124,8 @@ const pricingTiers = [
 ];
 
 export const PricingModal = ({ isOpen, onClose, userId }: PricingModalProps) => {
-  const { fetchBalance, isLoading } = useBalanceContext();
+  const { refreshProfile, isLoading } = useAuth();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleBuy = (tier: typeof pricingTiers[0]) => {
     toast.info(
@@ -135,7 +136,15 @@ export const PricingModal = ({ isOpen, onClose, userId }: PricingModalProps) => 
   };
 
   const handleCheckPayment = async () => {
-    await fetchBalance();
+    setIsRefreshing(true);
+    try {
+      await refreshProfile();
+      toast.success("Profile refreshed! Check your credits.");
+    } catch {
+      toast.error("Failed to refresh. Please try again.");
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   return (
@@ -331,10 +340,10 @@ export const PricingModal = ({ isOpen, onClose, userId }: PricingModalProps) => 
               <div className="text-center">
                 <button
                   onClick={handleCheckPayment}
-                  disabled={isLoading}
+                  disabled={isLoading || isRefreshing}
                   className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-secondary/50 hover:bg-secondary/70 text-foreground font-medium transition-all disabled:opacity-50 border border-border/50"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                   <span>Check Payment Status</span>
                 </button>
                 <p className="text-xs text-muted-foreground mt-3">
